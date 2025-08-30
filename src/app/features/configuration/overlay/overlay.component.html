@@ -1,0 +1,257 @@
+<div class="p-6">
+  <!-- Page Header -->
+  <div class="mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Overlay Configuration</h2>
+    <p class="text-gray-600">Manage and configure accounting overlay adjustments</p>
+  </div>
+
+  <!-- Search and Filters -->
+  <div class="filter-bar">
+    <div class="filter-row w-full">
+      <div class="flex items-center space-x-2">
+        <label class="filter-label">Search:</label>
+        <input type="text" class="filter-input w-64" placeholder="Search overlays..." [(ngModel)]="searchTerm" />
+      </div>
+      <div class="flex items-center space-x-2">
+        <label class="filter-label">Overlay Type:</label>
+        <select class="filter-input w-48" [(ngModel)]="selectedType">
+          <option [ngValue]="null">All</option>
+          <option *ngFor="let opt of overlayTypes" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+      </div>
+      <div class="flex items-center space-x-2">
+        <label class="filter-label">Status:</label>
+        <select class="filter-input w-40" [(ngModel)]="selectedStatus">
+          <option [ngValue]="null">All</option>
+          <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+      </div>
+      <div class="ml-auto">
+        <button class="btn btn-primary" (click)="showAddDialog = true">
+          <i class="pi pi-plus"></i>
+          <span>Add Overlay</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlays Table -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+    <!-- removed PrimeNG table -->
+    <!-- <p-table [hidden]="true"
+      [value]="overlays" 
+      [paginator]="true" 
+      [rows]="10"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+      [globalFilterFields]="['name', 'description', 'type']"
+      styleClass="p-datatable-sm p-datatable-gridlines">
+      
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="id" style="width: 100px">
+            ID
+            <p-sortIcon field="id"></p-sortIcon>
+          </th>
+          <th pSortableColumn="name">
+            Name
+            <p-sortIcon field="name"></p-sortIcon>
+          </th>
+          <th pSortableColumn="type" style="width: 180px">
+            Type
+            <p-sortIcon field="type"></p-sortIcon>
+          </th>
+          <th pSortableColumn="effectiveDate" style="width: 130px">
+            Effective Date
+            <p-sortIcon field="effectiveDate"></p-sortIcon>
+          </th>
+          <th pSortableColumn="expiryDate" style="width: 130px">
+            Expiry Date
+            <p-sortIcon field="expiryDate"></p-sortIcon>
+          </th>
+          <th pSortableColumn="isAutoApplied" style="width: 120px">
+            Auto Applied
+            <p-sortIcon field="isAutoApplied"></p-sortIcon>
+          </th>
+          <th pSortableColumn="status" style="width: 120px">
+            Status
+            <p-sortIcon field="status"></p-sortIcon>
+          </th>
+          <th style="width: 100px">Actions</th>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="body" let-overlay>
+        <tr>
+          <td>{{ overlay.id }}</td>
+          <td>
+            <div>
+              <div class="font-medium">{{ overlay.name }}</div>
+              <div class="text-sm text-gray-500">{{ overlay.description }}</div>
+            </div>
+          </td>
+          <td>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                  [ngClass]="{
+                    'bg-blue-100 text-blue-800': overlay.type === 'FX Rate Adjustment',
+                    'bg-green-100 text-green-800': overlay.type === 'Market Value Adjustment',
+                    'bg-purple-100 text-purple-800': overlay.type === 'Volatility Adjustment',
+                    'bg-orange-100 text-orange-800': overlay.type === 'Credit Risk Adjustment'
+                  }">
+              {{ overlay.type }}
+            </span>
+          </td>
+          <td>{{ formatDate(overlay.effectiveDate) }}</td>
+          <td>{{ formatDate(overlay.expiryDate) }}</td>
+          <td class="text-center">
+            <i [class]="overlay.isAutoApplied ? 'pi pi-check-circle text-green-500' : 'pi pi-times-circle text-gray-400'"></i>
+          </td>
+          <td>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  [ngClass]="{
+                    'bg-green-100 text-green-800': overlay.status === 'Active',
+                    'bg-gray-100 text-gray-800': overlay.status === 'Inactive',
+                    'bg-yellow-100 text-yellow-800': overlay.status === 'Pending Approval'
+                  }">
+              {{ overlay.status }}
+            </span>
+          </td>
+          <td>
+            <div class="flex gap-2">
+              <button 
+                pButton 
+                pRipple 
+                icon="pi pi-pencil" 
+                class="p-button-rounded p-button-text p-button-sm"
+                pTooltip="Edit overlay"
+                tooltipPosition="top"
+                (click)="editOverlay(overlay)">
+              </button>
+              <button 
+                pButton 
+                pRipple 
+                icon="pi pi-trash" 
+                class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                pTooltip="Delete overlay"
+                tooltipPosition="top"
+                (click)="deleteOverlay(overlay)">
+              </button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="8" class="text-center p-6">
+            <div class="flex flex-col items-center justify-center">
+              <i class="pi pi-sliders-h text-gray-300 text-5xl mb-4"></i>
+              <span class="text-gray-500">No overlays found</span>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table> -->
+    <ag-grid-angular
+      class="ag-theme-alpine w-full"
+      style="height: 520px;"
+      [columnDefs]="columnDefs"
+      [rowData]="overlays"
+      [defaultColDef]="defaultColDef"
+      [gridOptions]="gridOptions"
+      (gridReady)="onGridReady($event)">
+    </ag-grid-angular>
+  </div>
+
+  <!-- Add/Edit Overlay Dialog -->
+  <p-dialog 
+    header="Add Overlay" 
+    [(visible)]="showAddDialog"
+    [modal]="true"
+    [style]="{width: '500px'}"
+    [closable]="true"
+    styleClass="p-fluid">
+    
+    <div class="grid grid-cols-1 gap-4 p-4">
+      <div class="field">
+        <label for="overlayName" class="block text-sm font-medium text-gray-700 mb-1">Overlay Name</label>
+        <input 
+          id="overlayName"
+          type="text" 
+          pInputText 
+          [(ngModel)]="newOverlay.name"
+          placeholder="Enter overlay name"
+          class="w-full">
+      </div>
+      
+      <div class="field">
+        <label for="overlayDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <input 
+          id="overlayDescription"
+          type="text" 
+          pInputText 
+          [(ngModel)]="newOverlay.description"
+          placeholder="Enter overlay description"
+          class="w-full">
+      </div>
+      
+      <div class="field">
+        <label for="overlayType" class="block text-sm font-medium text-gray-700 mb-1">Overlay Type</label>
+        <p-dropdown 
+          id="overlayType"
+          [options]="overlayTypes" 
+          [(ngModel)]="newOverlay.type"
+          placeholder="Select overlay type"
+          class="w-full">
+        </p-dropdown>
+      </div>
+      
+      <div class="field">
+        <label for="effectiveDate" class="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
+        <p-calendar 
+          id="effectiveDate"
+          [(ngModel)]="newOverlay.effectiveDate"
+          [showIcon]="true"
+          dateFormat="yy-mm-dd"
+          placeholder="Select effective date"
+          class="w-full">
+        </p-calendar>
+      </div>
+      
+      <div class="field">
+        <label for="expiryDate" class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label>
+        <p-calendar 
+          id="expiryDate"
+          [(ngModel)]="newOverlay.expiryDate"
+          [showIcon]="true"
+          dateFormat="yy-mm-dd"
+          placeholder="Select expiry date (optional)"
+          class="w-full">
+        </p-calendar>
+      </div>
+      
+      <div class="field flex items-center">
+        <label for="isAutoApplied" class="block text-sm font-medium text-gray-700 mr-4">Auto Applied</label>
+        <p-inputSwitch id="isAutoApplied" [(ngModel)]="newOverlay.isAutoApplied"></p-inputSwitch>
+      </div>
+      
+      <div class="field">
+        <label for="overlayStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <p-dropdown 
+          id="overlayStatus"
+          [options]="statusOptions" 
+          [(ngModel)]="newOverlay.status"
+          placeholder="Select status"
+          class="w-full">
+        </p-dropdown>
+      </div>
+    </div>
+    
+    <ng-template pTemplate="footer">
+      <div class="flex justify-end gap-2">
+        <p-button label="Cancel" icon="pi pi-times" (onClick)="showAddDialog = false" styleClass="btn btn-secondary"></p-button>
+        <p-button label="Save" icon="pi pi-check" (onClick)="saveOverlay()" styleClass="btn btn-primary"></p-button>
+      </div>
+    </ng-template>
+  </p-dialog>
+</div>

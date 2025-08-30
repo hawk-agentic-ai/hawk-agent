@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.angular/
+npm-debug.log*
+pnpm-debug.log*
+.env
+.env.*
+
+# Angular cache
+.angular/
+# Builds
+dist/
+# Deps
+node_modules/

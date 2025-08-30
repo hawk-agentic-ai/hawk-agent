@@ -1,0 +1,276 @@
+<div class="p-6 h-full flex flex-col">
+  <!-- Page Header -->
+  <div class="mb-6">
+    <h2 class="text-xl font-semibold text-gray-900 mb-2">Hedge Framework Configuration</h2>
+    <p class="text-gray-600">Manage and configure hedge accounting frameworks</p>
+  </div>
+
+  <!-- Search and Filters -->
+  <div class="filter-bar">
+    <div class="filter-row w-full">
+      <div class="flex items-center space-x-2">
+        <label class="filter-label">Search:</label>
+        <input type="text" class="filter-input w-64" placeholder="Search frameworks..." [(ngModel)]="searchTerm" />
+      </div>
+      <div class="flex items-center space-x-2">
+        <label class="filter-label">Framework Type:</label>
+        <select class="filter-input w-48" [(ngModel)]="selectedType">
+          <option [ngValue]="null">All</option>
+          <option *ngFor="let opt of frameworkTypes" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+      </div>
+      <div class="flex items-center space-x-2">
+        <label class="filter-label">Status:</label>
+        <select class="filter-input w-40" [(ngModel)]="selectedStatus">
+          <option [ngValue]="null">All</option>
+          <option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</option>
+        </select>
+      </div>
+      <div class="ml-auto">
+        <button class="btn btn-primary" (click)="openAdd()">
+          <i class="pi pi-plus"></i>
+          <span>Add</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Frameworks Table -->
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 min-h-0 overflow-hidden" style="height: 60vh;">
+    <!-- removed PrimeNG table -->
+    <!-- <p-table [hidden]="true"
+      [value]="frameworks" 
+      [paginator]="true" 
+      [rows]="10"
+      [showCurrentPageReport]="true"
+      currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+      [globalFilterFields]="['name', 'description', 'type', 'applicableTo']"
+      styleClass="p-datatable-sm p-datatable-gridlines">
+      
+      <ng-template pTemplate="header">
+        <tr>
+          <th pSortableColumn="id" style="width: 100px">
+            ID
+            <p-sortIcon field="id"></p-sortIcon>
+          </th>
+          <th pSortableColumn="name">
+            Name
+            <p-sortIcon field="name"></p-sortIcon>
+          </th>
+          <th pSortableColumn="type" style="width: 180px">
+            Type
+            <p-sortIcon field="type"></p-sortIcon>
+          </th>
+          <th pSortableColumn="applicableTo" style="width: 180px">
+            Applicable To
+            <p-sortIcon field="applicableTo"></p-sortIcon>
+          </th>
+          <th pSortableColumn="status" style="width: 120px">
+            Status
+            <p-sortIcon field="status"></p-sortIcon>
+          </th>
+          <th pSortableColumn="lastUpdated" style="width: 150px">
+            Last Updated
+            <p-sortIcon field="lastUpdated"></p-sortIcon>
+          </th>
+          <th style="width: 100px">Actions</th>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="body" let-framework>
+        <tr>
+          <td>{{ framework.id }}</td>
+          <td>
+            <div>
+              <div class="font-medium">{{ framework.name }}</div>
+              <div class="text-sm text-gray-500">{{ framework.description }}</div>
+            </div>
+          </td>
+          <td>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium" 
+                  [ngClass]="{
+                    'bg-blue-100 text-blue-800': framework.type === 'Cash Flow Hedge',
+                    'bg-green-100 text-green-800': framework.type === 'Fair Value Hedge',
+                    'bg-purple-100 text-purple-800': framework.type === 'Net Investment Hedge'
+                  }">
+              {{ framework.type }}
+            </span>
+          </td>
+          <td>{{ framework.applicableTo }}</td>
+          <td>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                  [ngClass]="{
+                    'bg-green-100 text-green-800': framework.status === 'Active',
+                    'bg-gray-100 text-gray-800': framework.status === 'Inactive',
+                    'bg-yellow-100 text-yellow-800': framework.status === 'Draft'
+                  }">
+              {{ framework.status }}
+            </span>
+          </td>
+          <td>{{ framework.lastUpdated }}</td>
+          <td>
+            <div class="flex gap-2">
+              <button 
+                pButton 
+                pRipple 
+                icon="pi pi-pencil" 
+                class="p-button-rounded p-button-text p-button-sm"
+                pTooltip="Edit framework"
+                tooltipPosition="top"
+                (click)="editFramework(framework)">
+              </button>
+              <button 
+                pButton 
+                pRipple 
+                icon="pi pi-trash" 
+                class="p-button-rounded p-button-text p-button-danger p-button-sm"
+                pTooltip="Delete framework"
+                tooltipPosition="top"
+                (click)="deleteFramework(framework)">
+              </button>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+      
+      <ng-template pTemplate="emptymessage">
+        <tr>
+          <td colspan="7" class="text-center p-6">
+            <div class="flex flex-col items-center justify-center">
+              <i class="pi pi-sitemap text-gray-300 text-5xl mb-4"></i>
+              <span class="text-gray-500">No frameworks found</span>
+            </div>
+          </td>
+        </tr>
+      </ng-template>
+    </p-table> -->
+    <ag-grid-angular
+      class="ag-theme-alpine w-full"
+      style="height: 100%; min-height: 420px;"
+      [columnDefs]="columnDefs"
+      [rowData]="frameworks"
+      [defaultColDef]="defaultColDef"
+      [gridOptions]="gridOptions"
+      (gridReady)="onGridReady($event)">
+    </ag-grid-angular>
+  </div>
+
+  <!-- Overlay Sheet -->
+  <div *ngIf="showSheet" class="fixed inset-0 z-40">
+    <div class="absolute inset-0 bg-black/50" (click)="showSheet = false; dialogMode = 'add'"></div>
+    <div class="absolute inset-x-0 top-[2.5vh] h-[95vh] w-[100vw] max-w-[100vw] bg-white shadow-xl border border-gray-200 rounded-t-2xl overflow-hidden flex flex-col" (click)="$event.stopPropagation()">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <h3 class="text-base font-semibold text-gray-900">{{ dialogMode==='edit' ? 'Edit Framework' : 'Add Framework' }}</h3>
+        <button class="btn btn-tertiary" (click)="showSheet=false"><i class="pi pi-times"></i></button>
+      </div>
+      <div class="flex-1 overflow-auto p-4 space-y-4 bg-[#F5F7F9]">
+        <!-- General -->
+        <div class="rounded-lg border border-gray-200 p-4 bg-white">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-3"><div class="text-sm font-semibold text-gray-700">General</div></div>
+            <div class="col-span-12 md:col-span-9">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Framework ID</label><input class="filter-input w-full" [(ngModel)]="framework.framework_id" [readonly]="dialogMode==='edit'"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Type</label><input class="filter-input w-full" [(ngModel)]="framework.framework_type"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">State</label><input class="filter-input w-full" [(ngModel)]="framework.hedging_state"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Entity</label><input class="filter-input w-full" [(ngModel)]="framework.entity_id"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Currency</label><input class="filter-input w-full" [(ngModel)]="framework.currency_code"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Active</label><p-dropdown [options]="[{label:'Yes',value:'Y'},{label:'No',value:'N'}]" [(ngModel)]="framework.active_flag" styleClass="filter-input w-full" [style]="{width:'100%'}"></p-dropdown></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Limits & Effectiveness -->
+        <div class="rounded-lg border border-gray-200 p-4 bg-white">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-3"><div class="text-sm font-semibold text-gray-700">Limits & Effectiveness</div></div>
+            <div class="col-span-12 md:col-span-9">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Min Hedge Amount</label><input type="number" class="filter-input w-full" [(ngModel)]="framework.minimum_hedge_amount"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Max Hedge Amount</label><input type="number" class="filter-input w-full" [(ngModel)]="framework.maximum_hedge_amount"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Buffer %</label><input type="number" class="filter-input w-full" [(ngModel)]="framework.buffer_percentage"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Hedge Ratio</label><input type="number" class="filter-input w-full" [(ngModel)]="framework.hedge_ratio"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Effectiveness Lower</label><input type="number" class="filter-input w-full" [(ngModel)]="framework.effectiveness_threshold_lower"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Effectiveness Upper</label><input type="number" class="filter-input w-full" [(ngModel)]="framework.effectiveness_threshold_upper"/></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Methods & Notes -->
+        <div class="rounded-lg border border-gray-200 p-4 bg-white">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-3"><div class="text-sm font-semibold text-gray-700">Methods & Notes</div></div>
+            <div class="col-span-12 md:col-span-9">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Accounting Method</label><input class="filter-input w-full" [(ngModel)]="framework.accounting_method"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Rebalancing Frequency</label><input class="filter-input w-full" [(ngModel)]="framework.rebalancing_frequency"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">CAR Exemption Override</label><input class="filter-input w-full" [(ngModel)]="framework.car_exemption_override"/></div>
+                <div class="field md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Notes</label><textarea class="filter-input w-full" style="height:auto; min-height: 80px;" [(ngModel)]="framework.notes"></textarea></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Dates -->
+        <div class="rounded-lg border border-gray-200 p-4 bg-white">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-3"><div class="text-sm font-semibold text-gray-700">Dates</div></div>
+            <div class="col-span-12 md:col-span-9">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Effective Date</label><input type="date" class="filter-input w-full" [(ngModel)]="framework.effective_date"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Expiry Date</label><input type="date" class="filter-input w-full" [(ngModel)]="framework.expiry_date"/></div>
+                <div class="field md:col-span-2"><label class="block text-sm font-medium text-gray-700 mb-1">Period</label><input class="filter-input w-full" placeholder="e.g., [2025-01-01,2025-12-31)" [(ngModel)]="framework.period"/></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- System (read-only) -->
+        <div class="rounded-lg border border-gray-200 p-4 bg-white">
+          <div class="grid grid-cols-12 gap-4">
+            <div class="col-span-12 md:col-span-3"><div class="text-sm font-semibold text-gray-700">System</div></div>
+            <div class="col-span-12 md:col-span-9">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Created By</label><input class="filter-input w-full" [readonly]="true" [(ngModel)]="framework.created_by"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Created Date</label><input class="filter-input w-full" [readonly]="true" [(ngModel)]="framework.created_date"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Modified By</label><input class="filter-input w-full" [readonly]="true" [(ngModel)]="framework.modified_by"/></div>
+                <div class="field"><label class="block text-sm font-medium text-gray-700 mb-1">Modified Date</label><input class="filter-input w-full" [readonly]="true" [(ngModel)]="framework.modified_date"/></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 py-3 border-t border-gray-200 flex justify-between items-center gap-2 bg-white">
+        <button class="btn btn-secondary" (click)="showSheet=false"><i class="pi pi-times"></i><span>Cancel</span></button>
+        <button class="btn btn-primary" (click)="showConfirmSave = true"><i class="pi pi-check"></i><span>Save</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm dialogs -->
+  <p-dialog header="Confirm Changes" [(visible)]="showConfirmSave" [modal]="true" [closable]="false" [style]="{width: '520px'}" styleClass="app-dialog">
+    <div class="flex flex-col items-center text-center gap-2">
+      <i class="pi pi-check-circle text-green-500 text-4xl mb-1"></i>
+      <div class="text-base font-semibold text-gray-800">Apply Changes</div>
+      <div class="text-sm text-gray-600">Confirm updating framework <strong>{{ framework.framework_id }}</strong>.</div>
+    </div>
+    <ng-template pTemplate="footer">
+      <div class="flex justify-end gap-2 w-full">
+        <button class="btn btn-secondary" (click)="showConfirmSave = false"><i class="pi pi-times"></i><span>Cancel</span></button>
+        <button class="btn btn-primary" (click)="confirmSave()"><i class="pi pi-check"></i><span>Confirm</span></button>
+      </div>
+    </ng-template>
+  </p-dialog>
+
+  <p-dialog header="Delete Framework" [(visible)]="showConfirmDelete" [modal]="true" [closable]="false" [style]="{width: '520px'}" styleClass="app-dialog">
+    <div class="flex flex-col items-center text-center gap-2">
+      <i class="pi pi-trash text-red-500 text-4xl mb-1"></i>
+      <div class="text-base font-semibold text-gray-800">Delete Framework</div>
+      <div class="text-sm text-gray-600">Delete <strong>{{ pendingDeleteId }}</strong>?</div>
+    </div>
+    <ng-template pTemplate="footer">
+      <div class="flex justify-end gap-2 w-full">
+        <button class="btn btn-secondary" (click)="showConfirmDelete = false"><i class="pi pi-times"></i><span>Cancel</span></button>
+        <button class="btn btn-primary" (click)="confirmDelete()"><i class="pi pi-trash"></i><span>Delete</span></button>
+      </div>
+    </ng-template>
+  </p-dialog>
+</div>

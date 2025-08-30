@@ -1,0 +1,146 @@
+/* Entity Component Styles - Matching Positions Component Style */
+
+/* Custom styling for entity data table */
+:host ::ng-deep {
+  .entity-data-table {
+    /* Remove default PrimeNG table borders and styling */
+    .p-datatable-table {
+      border: none;
+    }
+    
+    .p-datatable-thead > tr > th {
+      border: none !important;
+      background: transparent !important;
+      font-weight: 600;
+    }
+    
+    .p-datatable-tbody > tr > td {
+      border-left: none !important;
+      border-right: none !important;
+      vertical-align: middle;
+    }
+    
+    .p-datatable-tbody > tr:last-child > td {
+      border-bottom: none !important;
+    }
+    
+    /* Remove PrimeNG hover effects */
+    .p-datatable-tbody > tr:hover {
+      background: transparent !important;
+    }
+    
+    /* Remove selection styling */
+    .p-datatable-tbody > tr.p-highlight {
+      background: transparent !important;
+    }
+  }
+  
+  /* Dialog styling */
+  .entity-dialog {
+    .p-dialog-header {
+      @apply bg-white border-b border-gray-200 px-6 py-4;
+    }
+    .p-dialog-title {
+      @apply text-lg font-semibold text-gray-900;
+    }
+    .p-dialog-content {
+      @apply p-6 bg-white;
+    }
+    .p-dialog-footer {
+      @apply bg-gray-50 px-6 py-4 border-t border-gray-200;
+    }
+  }
+  .entity-dialog-full {
+    .p-dialog {
+      width: 100vw !important;
+      max-width: 100vw !important;
+      height: 90vh !important;
+      max-height: 90vh !important;
+      border-top-left-radius: 16px !important;
+      border-top-right-radius: 16px !important;
+      border-radius: 16px 16px 0 0 !important;
+      position: fixed !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      top: auto !important;
+      margin: 0 !important;
+      transform: none !important;
+      box-shadow: 0 -2px 24px rgba(0,0,0,0.08);
+      z-index: 1200;
+    }
+    .p-dialog-content {
+      height: calc(90vh - 120px);
+      overflow-y: auto;
+    }
+  }
+  
+  /* Dropdown styling consistency */
+  .p-dropdown {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    
+    .p-dropdown-trigger {
+      border-left: 1px solid #d1d5db;
+    }
+    
+    &.p-focus {
+      box-shadow: 0 0 0 2px #3b82f6;
+      border-color: #3b82f6;
+    }
+  }
+
+  .p-dropdown-panel {
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  }
+
+  .p-dropdown.filter-input .p-dropdown-label {
+    padding: 0 .75rem;
+    font-size: .875rem;
+    height: 17px;
+    line-height: 36px;
+  }
+  
+  /* Input text focus states */
+  .p-inputtext:focus {
+    @apply ring-2 ring-blue-500 border-blue-500;
+  }
+  
+  /* Paginator styling */
+  .p-paginator {
+    @apply bg-white border-t border-gray-200 px-4 py-3;
+    
+    .p-paginator-pages {
+      .p-paginator-page {
+        @apply text-gray-700 hover:text-blue-600;
+        
+        &.p-highlight {
+          @apply bg-blue-600 text-white;
+        }
+      }
+    }
+    
+    .p-paginator-prev,
+    .p-paginator-next {
+      @apply text-gray-700 hover:text-blue-600;
+    }
+  }
+}
+
+/* Status badge animations */
+.inline-flex.items-center {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Button hover effects */
+button:hover i {
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Empty state styling */
+.pi-building {
+  opacity: 0.3;
+}

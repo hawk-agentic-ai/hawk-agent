@@ -1,0 +1,113 @@
+.dashboard-container {
+  width: 100%;
+  min-height: 100vh;
+  box-sizing: border-box;
+  padding: 16px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Page Header */
+.page-header {
+  @apply mb-6;
+}
+
+.page-title {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.page-description {
+  @apply text-gray-600;
+}
+
+/* KPI Section */
+.kpi-section {
+  @apply mb-8;
+}
+
+.kpi-grid {
+  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+}
+
+.kpi-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+}
+
+.kpi-header {
+  @apply flex items-center justify-between mb-4;
+}
+
+.kpi-icon-container {
+  @apply w-12 h-12 rounded-lg flex items-center justify-center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.kpi-icon {
+  @apply text-white text-xl;
+}
+
+.kpi-change {
+  @apply text-sm font-medium px-2 py-1 rounded-full;
+}
+
+.kpi-change.positive {
+  @apply bg-green-100 text-green-800;
+}
+
+.kpi-change.negative {
+  @apply bg-red-100 text-red-800;
+}
+
+.kpi-content {
+  @apply space-y-2;
+}
+
+.kpi-title {
+  @apply text-sm font-medium text-gray-600;
+}
+
+.kpi-value {
+  @apply text-2xl font-bold text-gray-900;
+}
+
+/* Charts Section - Fix for PrimeNG p-card height consistency */
+.chart-card {
+  height: 450px;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card .p-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-card .p-card-content {
+  flex: 1;
+}
+
+/* Canvas styling for charts */
+.chart-card canvas {
+  display: block;
+  box-sizing: border-box;
+  height: 300px;
+  width: 800px;
+}
+
+.chart-placeholder {
+  @apply p-8 flex-1 flex flex-col items-center justify-center text-center;
+  min-height: 300px;
+}
+
+.chart-placeholder-icon {
+  @apply text-4xl text-gray-400 mb-4;
+}
+
+.chart-placeholder-text {
+  @apply text-gray-500;
+}
+

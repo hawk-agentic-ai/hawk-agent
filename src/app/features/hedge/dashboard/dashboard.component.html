@@ -1,0 +1,90 @@
+<div class="dashboard-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <h2 class="page-title">Dashboard</h2>
+    <p class="page-description">Overview of hedge accounting positions and key metrics</p>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-section">
+    <div class="kpi-grid">
+      <div *ngFor="let kpi of kpiCards" class="kpi-card">
+        <div class="kpi-header">
+          <div class="kpi-icon-container">
+            <i [class]="kpi.icon + ' kpi-icon'"></i>
+          </div>
+          <div class="kpi-change" 
+               [class.positive]="kpi.changeType === 'positive'"
+               [class.negative]="kpi.changeType === 'negative'">
+            {{ kpi.change }}
+          </div>
+        </div>
+        <div class="kpi-content">
+          <h3 class="kpi-title">{{ kpi.title }}</h3>
+          <p class="kpi-value">{{ kpi.value }}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Section -->
+  <div class="charts-section">
+    <div class="charts-grid">
+      <!-- Placeholder for charts -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">Hedge Ratio by Currency</h3>
+        </div>
+        <div class="chart-placeholder" height="300px">
+          <i class="pi pi-chart-pie chart-placeholder-icon"></i>
+          <p class="chart-placeholder-text" height="300px">Chart visualization will be displayed here</p>
+        </div>
+      </div>
+      
+      <div class="chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">Monthly Performance</h3>
+        </div>
+        <div class="chart-placeholder">
+          <i class="pi pi-chart-line chart-placeholder-icon"></i>
+          <p class="chart-placeholder-text">Performance trends will be displayed here</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activities -->
+  <div class="activities-section">
+    <div class="activities-card">
+      <div class="activities-header">
+        <h3 class="activities-title">Recent Activities</h3>
+      </div>
+      <div class="activities-content">
+        <div class="activity-item">
+          <i class="pi pi-plus-circle activity-icon success"></i>
+          <div class="activity-details">
+            <p class="activity-title">New hedge relationship established</p>
+            <p class="activity-description">EUR/USD forward contract for Entity ABC</p>
+            <span class="activity-time">2 hours ago</span>
+          </div>
+        </div>
+        <div class="activity-item">
+          <i class="pi pi-check-circle activity-icon info"></i>
+          <div class="activity-details">
+            <p class="activity-title">Hedge effectiveness test completed</p>
+            <p class="activity-description">All tests passed for Q4 2024</p>
+            <span class="activity-time">4 hours ago</span>
+          </div>
+        </div>
+        <div class="activity-item">
+          <i class="pi pi-exclamation-triangle activity-icon warning"></i>
+          <div class="activity-details">
+            <p class="activity-title">Risk threshold exceeded</p>
+            <p class="activity-description">GBP exposure in London branch</p>
+            <span class="activity-time">6 hours ago</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,321 @@
+  <div class="p-6">
+    <!-- Page Header -->
+    <div class="mb-6">
+      <div class="flex justify-between items-center">
+        <div>
+          <h2 class="text-xl font-semibold text-gray-900 mb-2">Portfolio Configuration</h2>
+          <p class="text-gray-600">Manage and configure hedge accounting portfolios</p>
+        </div>
+        <button class="btn btn-primary" (click)="showAddDialog = true">
+          <i class="pi pi-plus"></i>
+          <span>Add Portfolio</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters Section -->
+    <div class="filter-bar">
+      <div class="filter-row">
+        <div class="flex items-center space-x-2 flex-1">
+          <label class="filter-label">Search:</label>
+          <input type="text" placeholder="Search portfolios..." [(ngModel)]="searchTerm" class="filter-input flex-1 max-w-xs">
+        </div>
+        <div class="flex items-center space-x-2">
+          <label class="filter-label">Portfolio Type:</label>
+          <select [(ngModel)]="selectedType" class="filter-input">
+            <option value="">All</option>
+            <option value="Currency Hedge">Currency Hedge</option>
+            <option value="Interest Rate">Interest Rate</option>
+            <option value="Commodity">Commodity</option>
+            <option value="Equity">Equity</option>
+          </select>
+        </div>
+        <div class="flex items-center space-x-2">
+          <label class="filter-label">Status:</label>
+          <select [(ngModel)]="selectedStatus" class="filter-input">
+            <option value="">All</option>
+            <option value="Active">Active</option>
+            <option value="Inactive">Inactive</option>
+            <option value="Draft">Draft</option>
+          </select>
+        </div>
+        <button class="btn btn-primary">Apply Filters</button>
+      </div>
+    </div>
+
+    <!-- Data Grid -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+      <!-- removed PrimeNG table -->
+      <!-- <p-table [hidden]="true"
+        [value]="portfolios" 
+        [paginator]="true" 
+        [rows]="20"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+        [globalFilterFields]="['name', 'description', 'type']"
+        styleClass="portfolio-data-table">
+        
+        <ng-template pTemplate="header">
+          <tr class="bg-gray-50">
+            <th class="text-left font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="id">
+              ID
+              <p-sortIcon field="id" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-left font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="name">
+              Portfolio Name
+              <p-sortIcon field="name" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-center font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="type">
+              Type
+              <p-sortIcon field="type" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-center font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="baseCurrency">
+              Currency
+              <p-sortIcon field="baseCurrency" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-right font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="totalExposure">
+              Total Exposure
+              <p-sortIcon field="totalExposure" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-right font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="hedgeRatio">
+              Hedge Ratio
+              <p-sortIcon field="hedgeRatio" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-center font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="riskLevel">
+              Risk Level
+              <p-sortIcon field="riskLevel" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-center font-semibold text-gray-700 px-4 py-3 border-b border-gray-200" pSortableColumn="status">
+              Status
+              <p-sortIcon field="status" class="ml-1"></p-sortIcon>
+            </th>
+            <th class="text-center font-semibold text-gray-700 px-4 py-3 border-b border-gray-200">Actions</th>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="body" let-portfolio>
+          <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-4 py-3 border-b border-gray-100 font-mono text-sm">{{ portfolio.id }}</td>
+            <td class="px-4 py-3 border-b border-gray-100">
+              <div>
+                <div class="font-medium text-gray-900">{{ portfolio.name }}</div>
+                <div class="text-sm text-gray-500">{{ portfolio.description }}</div>
+              </div>
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100 text-center">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [ngClass]="{
+                      'bg-blue-100 text-blue-800': portfolio.type === 'Currency Hedge',
+                      'bg-green-100 text-green-800': portfolio.type === 'Interest Rate',
+                      'bg-purple-100 text-purple-800': portfolio.type === 'Commodity',
+                      'bg-orange-100 text-orange-800': portfolio.type === 'Equity'
+                    }">
+                {{ portfolio.type }}
+              </span>
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100 text-center font-mono">{{ portfolio.baseCurrency }}</td>
+            <td class="px-4 py-3 border-b border-gray-100 text-right font-mono">
+              {{ formatCurrency(portfolio.totalExposure) }}
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100 text-right font-mono">
+              {{ portfolio.hedgeRatio.toFixed(1) }}%
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100 text-center">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [ngClass]="{
+                      'bg-red-100 text-red-800': portfolio.riskLevel === 'High',
+                      'bg-yellow-100 text-yellow-800': portfolio.riskLevel === 'Medium',
+                      'bg-green-100 text-green-800': portfolio.riskLevel === 'Low'
+                    }">
+                {{ portfolio.riskLevel }}
+              </span>
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100 text-center">
+              <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                    [ngClass]="{
+                      'bg-green-100 text-green-800': portfolio.status === 'Active',
+                      'bg-gray-100 text-gray-800': portfolio.status === 'Inactive',
+                      'bg-yellow-100 text-yellow-800': portfolio.status === 'Draft'
+                    }">
+                {{ portfolio.status }}
+              </span>
+            </td>
+            <td class="px-4 py-3 border-b border-gray-100 text-center">
+              <div class="flex items-center justify-center space-x-2">
+                <button 
+                  class="text-gray-400 hover:text-blue-600 transition-colors p-1"
+                  (click)="editPortfolio(portfolio)"
+                  title="Edit Portfolio">
+                  <i class="pi pi-pencil text-sm"></i>
+                </button>
+                <button 
+                  class="text-gray-400 hover:text-red-600 transition-colors p-1"
+                  (click)="deletePortfolio(portfolio)"
+                  title="Delete Portfolio">
+                  <i class="pi pi-trash text-sm"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="9" class="text-center py-12">
+              <div class="flex flex-col items-center justify-center">
+                <i class="pi pi-briefcase text-gray-300 text-5xl mb-4"></i>
+                <span class="text-gray-500 text-lg">No portfolios found</span>
+                <span class="text-gray-400 text-sm mt-1">Try adjusting your search or filters</span>
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table> -->
+      <ag-grid-angular
+        class="ag-theme-alpine w-full"
+        style="height: 600px;"
+        [columnDefs]="columnDefs"
+        [rowData]="portfolios"
+        [defaultColDef]="defaultColDef"
+        [gridOptions]="gridOptions"
+        (gridReady)="onGridReady($event)">
+      </ag-grid-angular>
+    </div>
+
+    <!-- Add/Edit Portfolio Dialog -->
+    <p-dialog 
+      header="Add Portfolio" 
+      [(visible)]="showAddDialog"
+      [modal]="true"
+      [style]="{width: '650px'}"
+      [closable]="true"
+      styleClass="portfolio-dialog">
+      
+      <div class="space-y-4 p-2">
+        <div class="grid grid-cols-1 gap-4">
+          <div>
+            <label for="portfolioName" class="block text-sm font-medium text-gray-700 mb-1">Portfolio Name</label>
+            <input 
+              id="portfolioName"
+              type="text" 
+              pInputText 
+              [(ngModel)]="newPortfolio.name"
+              placeholder="Enter portfolio name"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          
+          <div>
+            <label for="portfolioDescription" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input 
+              id="portfolioDescription"
+              type="text" 
+              pInputText 
+              [(ngModel)]="newPortfolio.description"
+              placeholder="Enter portfolio description"
+              class="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="portfolioType" class="block text-sm font-medium text-gray-700 mb-1">Portfolio Type</label>
+              <p-dropdown 
+                id="portfolioType"
+                [options]="portfolioTypes" 
+                [(ngModel)]="newPortfolio.type"
+                placeholder="Select type"
+                styleClass="w-full">
+              </p-dropdown>
+            </div>
+            
+            <div>
+              <label for="baseCurrency" class="block text-sm font-medium text-gray-700 mb-1">Base Currency</label>
+              <p-dropdown 
+                id="baseCurrency"
+                [options]="currencies" 
+                [(ngModel)]="newPortfolio.baseCurrency"
+                placeholder="Select currency"
+                styleClass="w-full">
+              </p-dropdown>
+            </div>
+          </div>
+          
+          <div>
+            <label for="entities" class="block text-sm font-medium text-gray-700 mb-1">Included Entities</label>
+            <p-multiSelect
+              id="entities"
+              [options]="entities"
+              [(ngModel)]="newPortfolio.entities"
+              defaultLabel="Select entities"
+              display="chip"
+              styleClass="w-full">
+            </p-multiSelect>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="totalExposure" class="block text-sm font-medium text-gray-700 mb-1">Total Exposure (USD)</label>
+              <p-inputNumber
+                id="totalExposure"
+                [(ngModel)]="newPortfolio.totalExposure"
+                mode="currency"
+                currency="USD"
+                locale="en-US"
+                [minFractionDigits]="0"
+                styleClass="w-full">
+              </p-inputNumber>
+            </div>
+            
+            <div>
+              <label for="hedgeRatio" class="block text-sm font-medium text-gray-700 mb-1">Hedge Ratio (%)</label>
+              <p-inputNumber
+                id="hedgeRatio"
+                [(ngModel)]="newPortfolio.hedgeRatio"
+                suffix="%"
+                [min]="0"
+                [max]="100"
+                [minFractionDigits]="1"
+                [maxFractionDigits]="1"
+                styleClass="w-full">
+              </p-inputNumber>
+            </div>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="riskLevel" class="block text-sm font-medium text-gray-700 mb-1">Risk Level</label>
+              <p-dropdown 
+                id="riskLevel"
+                [options]="riskLevels" 
+                [(ngModel)]="newPortfolio.riskLevel"
+                placeholder="Select risk level"
+                styleClass="w-full">
+              </p-dropdown>
+            </div>
+            
+            <div>
+              <label for="portfolioStatus" class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <p-dropdown 
+                id="portfolioStatus"
+                [options]="statusOptions" 
+                [(ngModel)]="newPortfolio.status"
+                placeholder="Select status"
+                styleClass="w-full">
+              </p-dropdown>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <ng-template pTemplate="footer">
+        <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+          <button 
+            class="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 transition-colors"
+            (click)="showAddDialog = false">
+            Cancel
+          </button>
+          <button class="btn btn-secondary" (click)="showAddDialog = false">Cancel</button>
+          <button class="btn btn-primary" (click)="savePortfolio()">Save Portfolio</button>
+        </div>
+      </ng-template>
+    </p-dialog>
+  </div>

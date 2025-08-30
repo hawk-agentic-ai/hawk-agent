@@ -1,0 +1,159 @@
+/* Portfolio Component Styles - Matching Positions Component Style */
+
+/* Custom styling for portfolio data table */
+:host ::ng-deep {
+  .portfolio-data-table {
+    /* Remove default PrimeNG table borders and styling */
+    .p-datatable-table {
+      border: none;
+    }
+    
+    .p-datatable-thead > tr > th {
+      border: none !important;
+      background: transparent !important;
+      font-weight: 600;
+    }
+    
+    .p-datatable-tbody > tr > td {
+      border-left: none !important;
+      border-right: none !important;
+      vertical-align: middle;
+    }
+    
+    .p-datatable-tbody > tr:last-child > td {
+      border-bottom: none !important;
+    }
+    
+    /* Remove PrimeNG hover effects */
+    .p-datatable-tbody > tr:hover {
+      background: transparent !important;
+    }
+    
+    /* Remove selection styling */
+    .p-datatable-tbody > tr.p-highlight {
+      background: transparent !important;
+    }
+  }
+  
+  /* Dialog styling */
+  .portfolio-dialog {
+    .p-dialog-header {
+      @apply bg-white border-b border-gray-200 px-6 py-4;
+    }
+    
+    .p-dialog-title {
+      @apply text-lg font-semibold text-gray-900;
+    }
+    
+    .p-dialog-content {
+      @apply p-6 bg-white;
+    }
+    
+    .p-dialog-footer {
+      @apply bg-gray-50 px-6 py-4 border-t border-gray-200;
+    }
+  }
+  
+  /* Dropdown styling consistency */
+  .p-dropdown {
+    @apply border border-gray-300 rounded-md;
+    
+    .p-dropdown-trigger {
+      @apply border-l border-gray-300;
+    }
+    
+    &.p-focus {
+      @apply ring-2 ring-blue-500 border-blue-500;
+    }
+  }
+  
+  .p-dropdown-panel {
+    @apply border border-gray-300 rounded-md shadow-lg;
+  }
+  
+  /* MultiSelect styling */
+  .p-multiselect {
+    @apply border border-gray-300 rounded-md;
+    min-height: 42px;
+    
+    .p-multiselect-trigger {
+      @apply border-l border-gray-300;
+    }
+    
+    &.p-focus {
+      @apply ring-2 ring-blue-500 border-blue-500;
+    }
+  }
+  
+  .p-multiselect-panel {
+    @apply border border-gray-300 rounded-md shadow-lg;
+  }
+  
+  /* Input Number styling */
+  .p-inputnumber {
+    width: 100%;
+    
+    .p-inputnumber-input {
+      @apply border border-gray-300 rounded-md px-3 py-2 text-sm;
+      
+      &:focus {
+        @apply ring-2 ring-blue-500 border-blue-500;
+      }
+    }
+  }
+  
+  /* Input text focus states */
+  .p-inputtext:focus {
+    @apply ring-2 ring-blue-500 border-blue-500;
+  }
+  
+  /* Paginator styling */
+  .p-paginator {
+    @apply bg-white border-t border-gray-200 px-4 py-3;
+    
+    .p-paginator-pages {
+      .p-paginator-page {
+        @apply text-gray-700 hover:text-blue-600;
+        
+        &.p-highlight {
+          @apply bg-blue-600 text-white;
+        }
+      }
+    }
+    
+    .p-paginator-prev,
+    .p-paginator-next {
+      @apply text-gray-700 hover:text-blue-600;
+    }
+  }
+  
+  /* Chip styling in multiselect */
+  .p-multiselect-token {
+    @apply bg-blue-100 text-blue-800 border border-blue-200;
+  }
+  
+  .p-multiselect-token-icon {
+    @apply text-blue-600;
+  }
+}
+
+/* Status badge animations */
+.inline-flex.items-center {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Button hover effects */
+button:hover i {
+  transform: scale(1.1);
+  transition: transform 0.2s ease-in-out;
+}
+
+/* Empty state styling */
+.pi-briefcase {
+  opacity: 0.3;
+}
+
+/* Currency formatting */
+.font-mono {
+  font-feature-settings: 'tnum';
+}

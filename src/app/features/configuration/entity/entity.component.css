@@ -1,0 +1,134 @@
+.entity-container {
+  @apply p-6;
+}
+
+/* Page Header */
+.page-header {
+  @apply mb-6;
+}
+
+.header-content {
+  @apply flex justify-between items-center;
+}
+
+.title-section {
+  @apply flex flex-col;
+}
+
+.page-title {
+  @apply text-xl font-semibold text-gray-900 mb-2;
+}
+
+.page-description {
+  @apply text-gray-600;
+}
+
+.add-button {
+  @apply flex-shrink-0;
+}
+
+/* Filters Section */
+.filters-section {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6;
+}
+
+.filters-content {
+  @apply flex items-center space-x-4;
+}
+
+.search-container {
+  @apply flex-1;
+}
+
+.search-input {
+  @apply w-full;
+}
+
+.search-field {
+  @apply w-full;
+}
+
+.filter-dropdown {
+  @apply min-w-[150px];
+}
+
+/* Table Container */
+.table-container {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+}
+
+/* Status Badges */
+.status-badge {
+  @apply px-2 py-1 text-xs rounded-full font-medium;
+}
+
+.status-badge.active {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-badge.inactive {
+  @apply bg-red-100 text-red-800;
+}
+
+.status-badge.pending {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.type-badge.subsidiary {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.type-badge.branch {
+  @apply bg-green-100 text-green-800;
+}
+
+.type-badge.representative {
+  @apply bg-purple-100 text-purple-800;
+}
+
+/* Action Buttons */
+.action-buttons {
+  @apply flex space-x-2;
+}
+
+/* Dialog Styles */
+.dialog-content {
+  @apply space-y-4;
+}
+
+.form-field {
+  @apply flex flex-col;
+}
+
+.field-label {
+  @apply block text-sm font-medium text-gray-700 mb-1;
+}
+
+.field-input {
+  @apply w-full;
+}
+
+.dialog-footer {
+  @apply flex justify-end space-x-2;
+}
+
+/* Custom PrimeNG overrides */
+:host ::ng-deep .entities-table .p-datatable-thead > tr > th {
+  @apply bg-gray-50 font-semibold text-gray-700;
+}
+
+:host ::ng-deep .entities-table .p-datatable-tbody > tr:hover {
+  @apply bg-gray-50;
+}
+
+:host ::ng-deep .entity-dialog .p-dialog-header {
+  @apply bg-gray-50 border-b;
+}
+
+:host ::ng-deep .entity-dialog .p-dialog-content {
+  @apply p-6;
+}
+
+:host ::ng-deep .entity-dialog .p-dialog-footer {
+  @apply p-4 bg-gray-50 border-t;
+}
