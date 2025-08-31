@@ -1,10 +1,4 @@
 /* Global dropdown style for all feature modules */
-.p-dropdown.filter-input .p-dropdown-label {
-  padding: 0 .75rem;
-  font-size: .875rem;
-  height: 17px;
-  line-height: 36px;
-}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -85,9 +79,9 @@ input[type="date"].filter-input,
 .logo-box {
   width: 40px;
   height: 40px;
-  background-color: #dc2626;
-  color: white;
-  border-radius: 50%;
+  background-color: transparent; /* container only; do not tint */
+  color: inherit;
+  border-radius: 0; /* square container, no circular background */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -368,16 +362,12 @@ a.active span {
 }
 /* Base label styles (kept for backward compatibility) */
 .p-dropdown.filter-input .p-dropdown-label {
-  padding: 0 0.75rem; /* px-3 */
-  font-size: 0.875rem; /* text-sm */
-  height: 36px;
-  line-height: 36px; /* fallback */
-}
-/* Precise fix for: p-dropdown-label.p-inputtext (actual element) */
-.p-dropdown.filter-input .p-dropdown-label.p-inputtext {
   display: flex;              /* center content */
   align-items: center;        /* vertically center */
-  line-height: 1.25rem;       /* match inputs */
+  padding: 0 0.75rem;         /* px-3 */
+  font-size: 0.875rem;        /* text-sm */
+  height: 20px;               /* requested smaller label height */
+  line-height: 1.25rem;       /* ~20px, keeps text crisp */
 }
 .p-dropdown.filter-input .p-dropdown-trigger {
   padding-right: 0.5rem;
@@ -422,6 +412,22 @@ a.active span {
 .app-dialog .p-dialog-content { padding: 24px 32px; }
 .app-dialog .p-dialog-footer { padding: 16px 24px; }
 .app-dialog .p-dialog { border-radius: 12px; }
+
+/* Full-width bottom-aligned sheet dialog used across config modals */
+.entity-dialog-full .p-dialog {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  margin: 0 !important;
+  transform: none !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+/* Optional: consistent paddings for these dialogs */
+.entity-dialog .p-dialog-header { padding: 16px 24px; }
+.entity-dialog .p-dialog-content { padding: 24px 32px; }
+.entity-dialog .p-dialog-footer { padding: 16px 24px; }
 
 /* Analytics components consistent layout */
 .analytics-page {

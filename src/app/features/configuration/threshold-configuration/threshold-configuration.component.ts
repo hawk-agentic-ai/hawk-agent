@@ -175,4 +175,3 @@ export class ThresholdConfigurationComponent implements OnInit, OnDestroy {
     this.form = {};
   }
 }
-

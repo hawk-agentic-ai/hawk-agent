@@ -2,18 +2,18 @@
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
-  padding: 16px;
-  background: #f9fafb;
+  padding: 0;
+  background: transparent;
   display: flex;
   flex-direction: column;
-  max-width: 1400px;
-  margin: 0 auto;
+  max-width: none;
+  margin: 0;
 }
 
 /* Page Header */
-.page-header {
-  @apply mb-6;
-}
+.page-header { @apply mb-4 flex items-end justify-between; }
+.header-left { @apply space-y-1; }
+.header-right { @apply flex items-center gap-2; }
 
 .page-title {
   @apply text-xl font-semibold text-gray-900 mb-2;
@@ -25,29 +25,40 @@
 
 /* KPI Section */
 .kpi-section {
-  @apply mb-8;
+  @apply mb-4;
 }
 
 .kpi-grid {
-  @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6;
+  @apply grid gap-4;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
 }
 
-.kpi-card {
-  @apply bg-white rounded-lg shadow-sm border border-gray-200 p-6;
+@media (max-width: 768px) {
+  .kpi-grid {
+    @apply grid-cols-1;
+  }
 }
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .kpi-grid {
+    @apply grid-cols-2;
+  }
+}
+
+@media (min-width: 1025px) {
+  .kpi-grid {
+    @apply grid-cols-4;
+  }
+}
+
+.kpi-card { @apply bg-white rounded-lg shadow-sm border border-gray-200 p-4; }
 
 .kpi-header {
-  @apply flex items-center justify-between mb-4;
+  @apply flex items-center justify-between mb-3;
 }
 
-.kpi-icon-container {
-  @apply w-12 h-12 rounded-lg flex items-center justify-center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-}
-
-.kpi-icon {
-  @apply text-white text-xl;
-}
+.kpi-icon-container { @apply w-12 h-12 rounded-lg flex items-center justify-center bg-blue-50; }
+.kpi-icon { @apply text-blue-600 text-xl; }
 
 .kpi-change {
   @apply text-sm font-medium px-2 py-1 rounded-full;
@@ -73,29 +84,88 @@
   @apply text-2xl font-bold text-gray-900;
 }
 
+/* Charts Section */
+.charts-section { @apply mb-6; }
+
+.charts-grid {
+  @apply grid gap-4;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+@media (max-width: 768px) {
+  .charts-grid {
+    @apply grid-cols-1;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1200px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (min-width: 1201px) {
+  .charts-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 /* Charts Section - Fix for PrimeNG p-card height consistency */
-.chart-card {
-  height: 450px;
-  display: flex;
-  flex-direction: column;
+.chart-card { height: auto; display: flex; flex-direction: column; min-width: 0; }
+
+.chart-card .p-card-header {
+  flex-shrink: 0;
+  padding: 1rem 1rem 0.5rem 1rem;
 }
 
 .chart-card .p-card-body {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  padding: 0.5rem 1rem 1rem 1rem;
 }
 
 .chart-card .p-card-content {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
-/* Canvas styling for charts */
-.chart-card canvas {
-  display: block;
-  box-sizing: border-box;
-  height: 300px;
-  width: 800px;
+.chart-controls {
+  @apply flex justify-end mb-3;
+  flex-shrink: 0;
+}
+
+.chart-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  min-height: 0;
+}
+
+/* Chart element sizing */
+.chart-wrapper .p-chart { width: 100%; }
+.chart-card canvas { display: block !important; box-sizing: border-box !important; width: 100% !important; max-width: 100% !important; }
+
+/* Specific heights by chart type (set on inner chart/canvas) */
+.chart-card.chart-donut .p-chart, .chart-card.chart-donut canvas { height: 300px !important; }
+.chart-card.chart-line .p-chart, .chart-card.chart-line canvas { height: 300px !important; }
+.chart-card.chart-bar .p-chart, .chart-card.chart-bar canvas { height: 360px !important; }
+
+/* Responsive chart heights */
+@media (max-width: 768px) { /* cards grow with content; keep fixed inner heights above */ }
+
+@media (min-width: 1440px) {
+  /* On very wide screens, let cards size to their content */
+  .chart-card { height: fit-content; }
+  /* Allow the chart to define the height cleanly */
+  .chart-wrapper { align-items: center; justify-content: center; }
 }
 
 .chart-placeholder {
@@ -111,3 +181,50 @@
   @apply text-gray-500;
 }
 
+/* Activities Section */
+.activities-section {
+  @apply mt-0;
+}
+
+.activities-card {
+  @apply bg-white rounded-lg shadow-sm border border-gray-200;
+}
+
+.activities-header {
+  @apply px-6 py-4 border-b border-gray-200;
+}
+
+.activities-title {
+  @apply text-lg font-medium text-gray-900;
+}
+
+.activities-content { @apply p-0; }
+.activity-row { position: relative; display: grid; grid-template-columns: 48px 1fr auto; gap: 10px; padding: 12px 16px; }
+.activity-row:hover { background: #f9fafb; }
+.activity-divider { grid-column: 1 / -1; height: 1px; background: #eef2f7; margin: 0 20px; }
+
+.activity-avatar { display: flex; align-items: flex-start; justify-content: center; }
+.avatar-circle { width: 32px; height: 32px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; background: #eff6ff; color: #2563eb; }
+.avatar-circle.info { background: #eff6ff; color: #2563eb; }
+.avatar-circle i { font-size: 14px; }
+
+.activity-main { min-width: 0; }
+.activity-title-line { font-size: 14px; color: #111827; }
+.activity-actor { font-weight: 600; margin-right: 6px; }
+.activity-text { color: #111827; }
+.activity-link { color: #2563eb; text-decoration: none; margin-left: 6px; }
+.activity-link:hover { text-decoration: underline; }
+
+.activity-desc { font-size: 14px; color: #374151; margin-top: 2px; }
+.prompt-snippet { margin-top: 6px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px 10px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; color: #111827; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.chip-list { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 4px 8px; border-radius: 9999px; background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+.activity-meta { font-size: 12px; color: #6b7280; margin-top: 6px; display: flex; align-items: center; gap: 6px; }
+.activity-meta .dot { color: #9ca3af; }
+
+.activity-action { display: flex; align-items: flex-start; }
+.activity-action .btn { height: 32px; padding: 0 10px; }
+
+.activities-footer { border-top: 1px solid #e5e7eb; padding: 10px 16px; text-align: center; }
+.show-all { background: transparent; border: none; color: #2563eb; font-size: 14px; padding: 6px 8px; cursor: pointer; }
+.show-all:hover { text-decoration: underline; }

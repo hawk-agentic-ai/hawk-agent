@@ -1,8 +1,23 @@
 <div class="dashboard-container">
   <!-- Page Header -->
   <div class="page-header">
-    <h2 class="page-title">Dashboard</h2>
-    <p class="page-description">Overview of hedge accounting positions and key metrics</p>
+    <div class="header-left">
+      <h2 class="page-title">Dashboard</h2>
+      <p class="page-description">Overview of hedge accounting positions and key metrics</p>
+    </div>
+    <div class="header-right">
+      <label class="filter-label mr-2">Currency:</label>
+      <p-dropdown 
+        [options]="availableCurrencies" 
+        [(ngModel)]="selectedCurrency" 
+        (onChange)="onCurrencyChange()"
+        placeholder="All Currencies"
+        optionLabel="label"
+        styleClass="filter-input"
+        [style]="{'min-width': '180px', 'width': '220px'}"
+        [showClear]="false">
+      </p-dropdown>
+    </div>
   </div>
 
   <!-- KPI Cards -->
@@ -30,26 +45,45 @@
   <!-- Charts Section -->
   <div class="charts-section">
     <div class="charts-grid">
-      <!-- Placeholder for charts -->
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3 class="chart-title">Hedge Ratio by Currency</h3>
+      <!-- Row 1: Primary Charts -->
+      <!-- Row 1: Donuts side-by-side -->
+      <p-card header="Currency Distribution" class="chart-card chart-donut">
+        <div class="chart-wrapper">
+          <p-chart type="doughnut" [data]="currencyChartData" [options]="chartOptions" class="w-full"></p-chart>
         </div>
-        <div class="chart-placeholder" height="300px">
-          <i class="pi pi-chart-pie chart-placeholder-icon"></i>
-          <p class="chart-placeholder-text" height="300px">Chart visualization will be displayed here</p>
-        </div>
-      </div>
+      </p-card>
       
-      <div class="chart-card">
-        <div class="chart-header">
-          <h3 class="chart-title">Monthly Performance</h3>
+      <p-card header="Position Status" class="chart-card chart-donut">
+        <div class="chart-wrapper">
+          <p-chart type="doughnut" [data]="positionStatusChartData" [options]="chartOptions" class="w-full"></p-chart>
         </div>
-        <div class="chart-placeholder">
-          <i class="pi pi-chart-line chart-placeholder-icon"></i>
-          <p class="chart-placeholder-text">Performance trends will be displayed here</p>
+      </p-card>
+      
+      <!-- Row 2: Comparison Charts -->
+      <p-card header="NAV vs Position" class="chart-card chart-line">
+        <div class="chart-wrapper">
+          <p-chart type="line" [data]="navVsPositionChartData" [options]="lineChartOptions" class="w-full"></p-chart>
         </div>
-      </div>
+      </p-card>
+      
+      <p-card header="Entity Exposure" class="chart-card chart-bar">
+        <div class="chart-wrapper">
+          <p-chart type="bar" [data]="entityExposureChartData" [options]="barChartOptions" class="w-full"></p-chart>
+        </div>
+      </p-card>
+      
+      <!-- Row 3: Analysis Charts -->
+      <p-card header="Position Value Over Time" class="chart-card chart-line">
+        <div class="chart-wrapper">
+          <p-chart type="line" [data]="positionValueChartData" [options]="lineChartOptions" class="w-full"></p-chart>
+        </div>
+      </p-card>
+      
+      <p-card header="Hedge Coverage Ratio" class="chart-card chart-line">
+        <div class="chart-wrapper">
+          <p-chart type="line" [data]="hedgeCoverageChartData" [options]="lineChartOptions" class="w-full"></p-chart>
+        </div>
+      </p-card>
     </div>
   </div>
 
@@ -60,31 +94,52 @@
         <h3 class="activities-title">Recent Activities</h3>
       </div>
       <div class="activities-content">
-        <div class="activity-item">
-          <i class="pi pi-plus-circle activity-icon success"></i>
-          <div class="activity-details">
-            <p class="activity-title">New hedge relationship established</p>
-            <p class="activity-description">EUR/USD forward contract for Entity ABC</p>
-            <span class="activity-time">2 hours ago</span>
+        <div *ngFor="let activity of recentActivities; let last = last" class="activity-row">
+          <!-- Left: Avatar/Icon -->
+          <div class="activity-avatar">
+            <span class="avatar-circle">
+              <i [class]="activity.icon" [ngClass]="activity.iconColor"></i>
+            </span>
           </div>
-        </div>
-        <div class="activity-item">
-          <i class="pi pi-check-circle activity-icon info"></i>
-          <div class="activity-details">
-            <p class="activity-title">Hedge effectiveness test completed</p>
-            <p class="activity-description">All tests passed for Q4 2024</p>
-            <span class="activity-time">4 hours ago</span>
+          <!-- Middle: Content -->
+          <div class="activity-main">
+            <div class="activity-title-line">
+              <span class="activity-actor">{{ activity.user }}</span>
+              <span class="activity-text">{{ activity.title }}</span>
+              <a class="activity-link" *ngIf="activity.metadata?.link" [href]="activity.metadata.link" target="_blank" rel="noopener">{{ activity.metadata.linkLabel || 'Details' }}</a>
+            </div>
+            <div class="activity-desc">{{ activity.description }}</div>
+            <div class="prompt-snippet" *ngIf="activity.type==='template_execution' && activity.metadata?.prompt_text">
+              {{ activity.metadata.prompt_text }}
+            </div>
+            <div class="chip-list" *ngIf="activity.tags?.length">
+              <span class="chip" *ngFor="let tag of activity.tags">{{ tag }}</span>
+            </div>
+            <div class="activity-meta">
+              <span class="activity-time">{{ activity.timestamp }}</span>
+              <span class="dot">•</span>
+              <span class="activity-status" *ngIf="activity.tags && activity.tags.length">Status: {{ activity.tags[activity.tags.length-1] }}</span>
+            </div>
           </div>
+          <!-- Right: Action -->
+          <div class="activity-action">
+            <button class="btn btn-secondary" (click)="viewRow(activity)">
+              <i class="pi pi-eye"></i>
+              <span>View</span>
+            </button>
+          </div>
+          <div class="activity-divider" *ngIf="!last"></div>
         </div>
-        <div class="activity-item">
-          <i class="pi pi-exclamation-triangle activity-icon warning"></i>
-          <div class="activity-details">
-            <p class="activity-title">Risk threshold exceeded</p>
-            <p class="activity-description">GBP exposure in London branch</p>
-            <span class="activity-time">6 hours ago</span>
+
+        <div *ngIf="recentActivities.length === 0" class="activity-row">
+          <div class="activity-avatar"><span class="avatar-circle info"><i class="pi pi-info-circle"></i></span></div>
+          <div class="activity-main">
+            <div class="activity-title-line"><span class="activity-text">Loading activities...</span></div>
+            <div class="activity-desc">Recent system activities will appear here</div>
           </div>
         </div>
       </div>
+      <!-- footer removed per request -->
     </div>
   </div>
 </div>

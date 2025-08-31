@@ -30,11 +30,7 @@ export const configurationRoutes: Routes = [
     path: 'portfolios',
     loadComponent: () => import('./portfolio/portfolio.component').then(m => m.PortfolioComponent)
   },
-  // New configuration pages
-  {
-    path: 'positions-nav',
-    loadComponent: () => import('./positions-nav/positions-nav.component').then(m => m.PositionsNavComponent)
-  },
+  // New configuration pages (positions-nav moved to Analytics)
   {
     path: 'products',
     loadComponent: () => import('./products/products.component').then(m => m.ProductsComponent)
@@ -54,6 +50,10 @@ export const configurationRoutes: Routes = [
   {
     path: 'booking-model-config',
     loadComponent: () => import('./booking-model-config/booking-model-config.component').then(m => m.BookingModelConfigComponent)
+  },
+  {
+    path: 'prompt-templates',
+    loadComponent: () => import('./prompt-templates/prompt-templates.component').then(m => m.PromptTemplatesComponent)
   },
   {
     path: '',

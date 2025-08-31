@@ -82,7 +82,9 @@ export class OverlayComponent implements OnInit {
   ];
   defaultColDef: ColDef = { resizable: true, sortable: true, filter: 'agSetColumnFilter', minWidth: 100 };
   gridOptions: GridOptions = { pagination: true, paginationPageSize: 10, animateRows: true, context: { componentParent: this } };
-  onGridReady(e: GridReadyEvent) { e.api.sizeColumnsToFit(); }
+  onGridReady(e: GridReadyEvent) {
+    e.api.sizeColumnsToFit();
+  }
   
   newOverlay = {
     id: '',

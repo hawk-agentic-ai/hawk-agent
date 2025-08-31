@@ -168,9 +168,9 @@
     header="Add Overlay" 
     [(visible)]="showAddDialog"
     [modal]="true"
-    [style]="{width: '500px'}"
+    [style]="{width: '100vw', height: '95vh', 'max-width': '100vw', 'max-height': '95vh', 'border-top-left-radius': '16px', 'border-top-right-radius': '16px'}"
     [closable]="true"
-    styleClass="p-fluid">
+    styleClass="entity-dialog entity-dialog-full">
     
     <div class="grid grid-cols-1 gap-4 p-4">
       <div class="field">
@@ -179,9 +179,10 @@
           id="overlayName"
           type="text" 
           pInputText 
+          class="filter-input w-full"
           [(ngModel)]="newOverlay.name"
           placeholder="Enter overlay name"
-          class="w-full">
+        >
       </div>
       
       <div class="field">
@@ -190,9 +191,10 @@
           id="overlayDescription"
           type="text" 
           pInputText 
+          class="filter-input w-full"
           [(ngModel)]="newOverlay.description"
           placeholder="Enter overlay description"
-          class="w-full">
+        >
       </div>
       
       <div class="field">
@@ -202,7 +204,7 @@
           [options]="overlayTypes" 
           [(ngModel)]="newOverlay.type"
           placeholder="Select overlay type"
-          class="w-full">
+          styleClass="filter-input w-full" [style]="{width:'100%'}">
         </p-dropdown>
       </div>
       
@@ -242,7 +244,7 @@
           [options]="statusOptions" 
           [(ngModel)]="newOverlay.status"
           placeholder="Select status"
-          class="w-full">
+          styleClass="filter-input w-full" [style]="{width:'100%'}">
         </p-dropdown>
       </div>
     </div>

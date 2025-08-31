@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { AgGridAngular } from 'ag-grid-angular';
@@ -48,15 +49,15 @@ interface PromptHistoryRow {
     TooltipModule
   ],
   template: `
-<div class="p-6">
+<div class="p-6 flex flex-col" style="height: 100vh; box-sizing: border-box;">
   <!-- Page Header -->
-  <div class="mb-6">
+  <div class="mb-6 flex-shrink-0">
     <h2 class="text-xl font-semibold text-gray-900 mb-2">Prompt History</h2>
     <p class="text-gray-600">View and manage HAWK Agent prompt history and responses</p>
   </div>
 
   <!-- Search and Add Button Section -->
-  <div class="flex items-center gap-4 mb-4">
+  <div class="flex items-center gap-4 mb-4 flex-shrink-0">
     <div class="flex-1 flex items-center gap-2">
       <label class="filter-label">Search:</label>
       <input type="text" placeholder="Search prompts, UIDs..." [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange($event)" class="filter-input flex-1 max-w-xs">
@@ -85,10 +86,10 @@ interface PromptHistoryRow {
   </div>
 
   <!-- Data Grid -->
-  <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+  <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 min-h-0" style="overflow: hidden;">
     <ag-grid-angular
-      class="ag-theme-alpine w-full"
-      style="height: 600px;"
+      class="ag-theme-alpine"
+      style="width: 100%; height: 100%;"
       [columnDefs]="columnDefs"
       [rowData]="promptHistory"
       [defaultColDef]="defaultColDef"
@@ -106,107 +107,79 @@ interface PromptHistoryRow {
     [closable]="true"
     styleClass="entity-dialog entity-dialog-full">
     
-    <div class="space-y-6 p-2" *ngIf="selectedPrompt">
-      <!-- Section: Session Details -->
-      <div class="rounded-lg border border-gray-200 p-4 bg-white">
+    <form class="space-y-6 p-2 h-full flex flex-col" *ngIf="selectedPrompt">
+      <!-- Section: Quick Details -->
+      <div class="rounded-lg border border-gray-200 p-4 bg-white flex-shrink-0">
         <div class="grid grid-cols-12 gap-4">
           <div class="col-span-12 md:col-span-3 flex items-center">
-            <div class="text-sm font-semibold text-gray-700">Session Details</div>
+            <div class="text-sm font-semibold text-gray-700">Quick Details</div>
           </div>
           <div class="col-span-12 md:col-span-9">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Message UID</label>
-                <div class="filter-input w-full bg-gray-50 font-mono text-xs">{{ selectedPrompt.msg_uid }}</div>
-              </div>
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Instruction ID</label>
-                <div class="filter-input w-full bg-gray-50 font-mono text-xs">{{ selectedPrompt.instruction_id }}</div>
-              </div>
-              <div class="field">
+              <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <div class="flex items-center">
-                  <span [class]="getStatusClass(selectedPrompt.agent_status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                    {{ selectedPrompt.agent_status | titlecase }}
-                  </span>
+                <div [class]="getStatusClass(selectedPrompt.agent_status)" class="inline-flex items-center px-2 py-1 rounded text-xs font-medium">
+                  {{ selectedPrompt.agent_status | titlecase }}
                 </div>
               </div>
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Created Date</label>
-                <div class="filter-input w-full bg-gray-50">{{ formatDate(selectedPrompt.created_at) }}</div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Created</label>
+                <div class="text-sm">{{ formatShortDate(selectedPrompt.created_at) }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Section: Prompt -->
-      <div class="rounded-lg border border-gray-200 p-4 bg-white">
+      <!-- Section: Prompt Text -->
+      <div class="rounded-lg border border-gray-200 p-4 bg-white flex-shrink-0">
         <div class="grid grid-cols-12 gap-4">
           <div class="col-span-12 md:col-span-3 flex items-center">
             <div class="text-sm font-semibold text-gray-700">Prompt</div>
           </div>
           <div class="col-span-12 md:col-span-9">
-            <div class="field">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Prompt Text</label>
-              <div class="w-full bg-white border border-gray-300 rounded-md p-3 min-h-[120px] text-sm whitespace-pre-wrap">{{ selectedPrompt.prompt_text }}</div>
-            </div>
+            <div class="bg-gray-50 border rounded p-3 text-sm max-h-32 overflow-y-auto">{{ selectedPrompt.prompt_text }}</div>
           </div>
         </div>
       </div>
 
-      <!-- Section: Response -->
-      <div class="rounded-lg border border-gray-200 p-4 bg-white">
-        <div class="grid grid-cols-12 gap-4">
-          <div class="col-span-12 md:col-span-3 flex items-center">
+      <!-- Section: Response Text -->
+      <div class="rounded-lg border border-gray-200 p-4 bg-white flex-1 flex flex-col">
+        <div class="grid grid-cols-12 gap-4 h-full">
+          <div class="col-span-12 md:col-span-3 flex items-start">
             <div class="text-sm font-semibold text-gray-700">Response</div>
           </div>
-          <div class="col-span-12 md:col-span-9">
-            <div class="field">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Response Text</label>
-              <div class="w-full bg-white border border-gray-300 rounded-md p-3 min-h-[200px] text-sm whitespace-pre-wrap">{{ selectedPrompt.response_text }}</div>
-            </div>
+          <div class="col-span-12 md:col-span-9 flex flex-col h-full">
+            <div class="bg-gray-50 border rounded p-3 text-sm flex-1 overflow-y-auto response-text" [innerHTML]="formatResponseText(selectedPrompt.response_text)"></div>
           </div>
         </div>
       </div>
 
-      <!-- Section: Metadata & Tokens -->
-      <div class="rounded-lg border border-gray-200 p-4 bg-white">
+      <!-- Section: Token Info -->
+      <div class="rounded-lg border border-gray-200 p-4 bg-white flex-shrink-0">
         <div class="grid grid-cols-12 gap-4">
           <div class="col-span-12 md:col-span-3 flex items-center">
-            <div class="text-sm font-semibold text-gray-700">Metadata & Tokens</div>
+            <div class="text-sm font-semibold text-gray-700">Token Usage</div>
           </div>
           <div class="col-span-12 md:col-span-9">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Input Tokens</label>
-                <div class="filter-input w-full bg-gray-50 text-center">{{ selectedPrompt.input_tokens }}</div>
+            <div class="grid grid-cols-3 gap-2 text-center">
+              <div class="bg-blue-50 rounded p-2">
+                <div class="text-xs text-gray-500">Input</div>
+                <div class="font-semibold">{{ selectedPrompt.input_tokens }}</div>
               </div>
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Output Tokens</label>
-                <div class="filter-input w-full bg-gray-50 text-center">{{ selectedPrompt.output_tokens }}</div>
+              <div class="bg-green-50 rounded p-2">
+                <div class="text-xs text-gray-500">Output</div>
+                <div class="font-semibold">{{ selectedPrompt.output_tokens }}</div>
               </div>
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Total Tokens</label>
-                <div class="filter-input w-full bg-gray-50 text-center">{{ selectedPrompt.total_tokens }}</div>
-              </div>
-              <div class="field">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Template Category</label>
-                <div class="filter-input w-full bg-gray-50">{{ selectedPrompt.template_category }}</div>
-              </div>
-              <div class="field" *ngIf="selectedPrompt.execution_time_ms">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Execution Time</label>
-                <div class="filter-input w-full bg-gray-50">{{ selectedPrompt.execution_time_ms }}ms</div>
-              </div>
-              <div class="field" *ngIf="selectedPrompt.agent_end_time">
-                <label class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
-                <div class="filter-input w-full bg-gray-50">{{ formatDate(selectedPrompt.agent_end_time) }}</div>
+              <div class="bg-purple-50 rounded p-2">
+                <div class="text-xs text-gray-500">Total</div>
+                <div class="font-semibold">{{ selectedPrompt.total_tokens }}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </form>
 
     <ng-template pTemplate="footer">
       <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200">
@@ -222,12 +195,38 @@ interface PromptHistoryRow {
   `,
   styleUrls: [],
   styles: [`
+    :host {
+      display: block;
+      height: 100%;
+      width: 100%;
+    }
+    
+    /* Ensure grid container is properly sized */
+    .grid-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    
     :host ::ng-deep {
-      /* AG-Grid table styling for consistent typography and alignment */
+      /* AG-Grid container fixes */
       .ag-theme-alpine {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
         font-size: 14px;
         line-height: 1.5;
+        width: 100% !important;
+        height: 100% !important;
+        position: relative;
+      }
+      
+      .ag-root-wrapper {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      
+      .ag-root {
+        width: 100% !important;
+        height: 100% !important;
       }
       
       .ag-theme-alpine .ag-row {
@@ -285,42 +284,60 @@ interface PromptHistoryRow {
       }
       
       /* Dialog styling */
-      .entity-dialog {
+      .prompt-dialog {
         .p-dialog-header {
-          @apply bg-white border-b border-gray-200 px-6 py-4;
+          @apply bg-white border-b border-gray-200 px-4 py-3;
         }
         .p-dialog-title {
-          @apply text-lg font-semibold text-gray-900;
+          @apply text-base font-semibold text-gray-900;
         }
         .p-dialog-content {
-          @apply p-6 bg-white;
+          @apply bg-white p-0;
+          max-height: calc(90vh - 120px);
+          overflow-y: auto;
         }
         .p-dialog-footer {
-          @apply bg-gray-50 px-6 py-4 border-t border-gray-200;
+          @apply bg-gray-50 px-4 py-3 border-t border-gray-200;
         }
       }
+      
+      /* Entity dialog styling */
       .entity-dialog-full {
         .p-dialog {
-          width: 100vw !important;
-          max-width: 100vw !important;
-          height: 90vh !important;
-          max-height: 90vh !important;
-          border-top-left-radius: 16px !important;
-          border-top-right-radius: 16px !important;
-          border-radius: 16px 16px 0 0 !important;
-          position: fixed !important;
-          left: 0 !important;
-          right: 0 !important;
-          bottom: 0 !important;
-          top: auto !important;
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
           margin: 0 !important;
           transform: none !important;
-          box-shadow: 0 -2px 24px rgba(0,0,0,0.08);
-          z-index: 1200;
+          border-radius: 16px 16px 0 0 !important;
         }
-        .p-dialog-content {
-          height: calc(90vh - 120px);
-          overflow-y: auto;
+      }
+      
+      /* Response text formatting */
+      .response-text {
+        font-family: ui-monospace, SFMono-Regular, 'SF Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        
+        strong {
+          font-weight: 600;
+          color: #1f2937;
+        }
+        
+        em {
+          font-style: italic;
+          color: #374151;
+        }
+        
+        code {
+          font-family: inherit;
+          font-size: 0.875em;
+        }
+        
+        h2, h3 {
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
         }
       }
     }
@@ -341,6 +358,7 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
   showDialog: boolean = false;
   dialogMode: 'view' | 'share' = 'view';
   selectedPrompt: PromptHistoryRow | null = null;
+  isDialogLoading: boolean = false;
 
   // Subscriptions
   private sessionsSubscription?: Subscription;
@@ -379,14 +397,14 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
     { 
       field: 'prompt_text', 
       headerName: 'Prompt', 
-      flex: 1, 
+      flex: 2, 
       minWidth: 300, 
       sortable: true,
       cellClass: 'flex items-center text-sm text-gray-700',
       cellRenderer: (params: any) => {
         const text = params.value || 'No prompt available';
-        const truncated = text.length > 80 ? text.substring(0, 80) + '...' : text;
-        return `<div class="text-sm" title="${text}">${truncated}</div>`;
+        const truncated = text.length > 120 ? text.substring(0, 120) + '...' : text;
+        return `<div class="text-sm" title="${text}" style="word-wrap: break-word;">${truncated}</div>`;
       }
     },
     {
@@ -459,15 +477,25 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
     }
   ];
 
-  defaultColDef: ColDef = { resizable: true, sortable: true, filter: 'agSetColumnFilter', minWidth: 100 };
+  defaultColDef: ColDef = { 
+    resizable: true, 
+    sortable: true, 
+    filter: 'agSetColumnFilter', 
+    minWidth: 100,
+    suppressSizeToFit: false // Allow columns to participate in flex sizing
+  };
 
   gridOptions: GridOptions = {
-    animateRows: true,
+    animateRows: false, // Disable animations for better performance
     rowHeight: 48,
     headerHeight: 40,
     suppressRowClickSelection: true,
     suppressCellFocus: true,
     suppressHorizontalScroll: false,
+    pagination: true,
+    paginationPageSize: 50,
+    paginationPageSizeSelector: [25, 50, 100],
+    skipHeaderOnAutoSize: true, // Don't auto-size based on header content
     context: { componentParent: this }
   };
 
@@ -478,11 +506,30 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
     { label: 'Cancelled', value: 'cancelled' }
   ];
 
-  constructor(private hawkAgentService: HawkAgentSimpleService) {}
+  constructor(private hawkAgentService: HawkAgentSimpleService, private route: ActivatedRoute) {}
 
   ngOnInit() {
-    this.loadPromptHistory();
+    // Read deep-link query params for auto-open
+    this.route.queryParams.subscribe((params) => {
+      const msg = params['msg_uid'];
+      const instr = params['instruction_id'];
+      if (msg || instr) {
+        // store and try open after load
+        (this as any)._pendingOpen = { msg_uid: msg, instruction_id: instr };
+      }
+      this.loadPromptHistory();
+    });
     this.setupRealtimeUpdates();
+  }
+  
+  @HostListener('window:resize', ['$event'])
+  onWindowResize() {
+    // Handle window resize to ensure grid adjusts properly
+    if (this.gridApi) {
+      setTimeout(() => {
+        this.gridApi?.sizeColumnsToFit();
+      }, 100);
+    }
   }
 
   ngOnDestroy() {
@@ -501,8 +548,15 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
 
   onGridReady(params: GridReadyEvent) {
     this.gridApi = params.api;
-    // Auto-size all columns based on content, but respect minWidth constraints
-    this.gridApi.autoSizeAllColumns();
+    
+    // Force grid to recalculate size after initialization
+    setTimeout(() => {
+      if (this.gridApi) {
+        this.gridApi.sizeColumnsToFit();
+        // Force grid to refresh its layout and check container size
+        this.gridApi.refreshCells();
+      }
+    }, 100);
   }
 
   onCellClicked(event: CellClickedEvent) {
@@ -513,39 +567,86 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
     if (this.searchTimer) clearTimeout(this.searchTimer);
     this.searchTimer = setTimeout(() => {
       this.loadPromptHistory();
-    }, 300);
+    }, 500); // Increased debounce time to reduce database calls
   }
 
   async loadPromptHistory() {
     this.isLoading = true;
     
     try {
-      console.log('Loading prompt history from database...');
       const sessions = await this.hawkAgentService.getSessions();
-      console.log('Database result:', sessions);
-      console.log('First session sample:', sessions[0]);
+      
+      // Apply filters and search
+      let filteredSessions = sessions;
+      
+      // Apply status filter
+      if (this.selectedStatus) {
+        filteredSessions = filteredSessions.filter(session => session.agent_status === this.selectedStatus);
+      }
+      
+      // Apply search filter
+      if (this.searchTerm && this.searchTerm.trim()) {
+        const searchLower = this.searchTerm.toLowerCase();
+        filteredSessions = filteredSessions.filter(session => 
+          session.msg_uid?.toLowerCase().includes(searchLower) ||
+          session.instruction_id?.toLowerCase().includes(searchLower) ||
+          session.metadata?.prompt_text?.toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Apply date range filter (simplified)
+      if (this.selectedDateRange !== 'all') {
+        const now = new Date();
+        const cutoffDate = new Date();
+        
+        switch (this.selectedDateRange) {
+          case 'today':
+            cutoffDate.setHours(0, 0, 0, 0);
+            break;
+          case '7days':
+            cutoffDate.setDate(now.getDate() - 7);
+            break;
+          case '30days':
+            cutoffDate.setDate(now.getDate() - 30);
+            break;
+          case '90days':
+            cutoffDate.setDate(now.getDate() - 90);
+            break;
+        }
+        
+        filteredSessions = filteredSessions.filter(session => {
+          const sessionDate = new Date(session.created_at!);
+          return sessionDate >= cutoffDate;
+        });
+      }
+      
+      // Limit to recent 1000 records for performance
+      const limitedSessions = filteredSessions.slice(0, 1000);
       
       // Convert sessions to PromptHistoryRow interface
-      this.promptHistory = sessions.map(session => this.mapSessionToHistoryRow(session));
-      this.totalCount = sessions.length;
+      this.promptHistory = limitedSessions.map(session => this.mapSessionToHistoryRow(session));
+      this.totalCount = filteredSessions.length;
       
-      console.log(`Loaded ${this.promptHistory.length} sessions from database`);
-      console.log('Prompt history data:', this.promptHistory);
-      console.log('Mapped first row:', this.promptHistory[0]);
-      
-      // Force update the grid
-      setTimeout(() => {
-        if (this.gridApi) {
-          console.log('Forcing grid refresh with data:', this.promptHistory);
-          this.gridApi.setGridOption('rowData', this.promptHistory);
-          this.gridApi.refreshCells();
-          // Auto-size columns based on content while respecting minWidth constraints
-          this.gridApi.autoSizeAllColumns();
+      // Update grid efficiently
+      if (this.gridApi) {
+        this.gridApi.setGridOption('rowData', this.promptHistory);
+        // Force grid to recalculate after data update
+        setTimeout(() => {
+          this.gridApi?.sizeColumnsToFit();
+        }, 50);
+      }
+      // Handle deep-link open once data is loaded
+      const pending = (this as any)._pendingOpen as { msg_uid?: string; instruction_id?: string } | undefined;
+      if (pending && this.promptHistory?.length) {
+        let match = this.promptHistory.find(r => (pending.msg_uid && r.msg_uid === pending.msg_uid) || (pending.instruction_id && r.instruction_id === pending.instruction_id));
+        if (match) {
+          this.viewPrompt(match);
+          // clear so it doesn't reopen
+          (this as any)._pendingOpen = undefined;
         }
-      }, 100);
+      }
     } catch (error) {
       console.error('Error loading prompt history:', error);
-      console.error('Error details:', error);
       // Fall back to generating mock data if database fails
       this.generateMockData();
     } finally {
@@ -554,9 +655,6 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
   }
 
   private mapSessionToHistoryRow(session: SimpleHawkSession): PromptHistoryRow {
-    console.log('Mapping session:', session);
-    console.log('Session metadata:', session.metadata);
-    console.log('Session agent_response:', session.agent_response);
     
     // Extract token information from various possible locations
     const getTokens = () => {
@@ -627,8 +725,6 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
       metadata: session.metadata,
       agent_response: session.agent_response
     };
-    console.log('Mapped result with tokens:', mapped);
-    console.log('Extracted tokens:', tokens);
     return mapped;
   }
 
@@ -639,9 +735,13 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
   }
 
   viewPrompt(row: PromptHistoryRow) {
+    if (!row || this.isDialogLoading) return;
+    
+    // Set data immediately for faster response
     this.selectedPrompt = row;
     this.dialogMode = 'view';
     this.showDialog = true;
+    this.isDialogLoading = false;
   }
 
   sharePrompt(row: PromptHistoryRow) {
@@ -698,6 +798,34 @@ export class PromptHistoryComponent implements OnInit, OnDestroy {
     if (!date) return '';
     const d = typeof date === 'string' ? new Date(date) : date;
     return d.toLocaleString();
+  }
+
+  formatResponseText(text: string): string {
+    if (!text) return '';
+    
+    // Convert markdown-like formatting to HTML
+    let formatted = text
+      // Convert **bold** to <strong>
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Convert *italic* to <em>
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Convert code blocks ```code``` to <code>
+      .replace(/```([\s\S]*?)```/g, '<code class="block bg-gray-100 p-2 rounded text-xs">$1</code>')
+      // Convert inline code `code` to <code>
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded text-xs">$1</code>')
+      // Convert numbered lists 1. item to proper list items
+      .replace(/^(\d+)\.\s+(.+)$/gm, '<div class="ml-4">$1. $2</div>')
+      // Convert bullet points - item to proper list items
+      .replace(/^[-*]\s+(.+)$/gm, '<div class="ml-4">• $1</div>')
+      // Convert headers ## Header to styled headers
+      .replace(/^##\s+(.+)$/gm, '<h3 class="text-base font-semibold mt-4 mb-2 text-gray-900">$1</h3>')
+      .replace(/^#\s+(.+)$/gm, '<h2 class="text-lg font-bold mt-4 mb-2 text-gray-900">$1</h2>')
+      // Convert double newlines to paragraph breaks
+      .replace(/\n\n/g, '<br><br>')
+      // Convert single newlines to line breaks
+      .replace(/\n/g, '<br>');
+
+    return formatted;
   }
 
   getStatusClass(status: string): string {

@@ -6,12 +6,13 @@ export const routes: Routes = [
     redirectTo: '/hedge/dashboard',
     pathMatch: 'full'
   },
-  { path: 'hedge/positions', redirectTo: '/hedge/dashboard/sfx-positions', pathMatch: 'full' },
+  { path: 'hedge/positions', redirectTo: '/hedge/dashboard/positions-nav', pathMatch: 'full' },
   {
     path: 'hedge/dashboard',
     loadComponent: () => import('./features/hedge/dashboard/dashboard.component').then(m => m.DashboardComponent)
   },
-  { path: 'hedge/dashboard/sfx-positions', loadComponent: () => import('./features/analytics/sfx-positions/sfx-positions.component').then(m => m.SfxPositionsComponent) },
+  // SFX Positions table hidden; using Positions NAV read-only view under Analytics
+  { path: 'hedge/dashboard/positions-nav', loadComponent: () => import('./features/configuration/positions-nav/positions-nav.component').then(m => m.PositionsNavComponent) },
   { path: 'hedge/dashboard/hedging-instruments', loadComponent: () => import('./features/analytics/hedging-instruments/hedging-instruments.component').then(m => m.HedgingInstrumentsComponent) },
   { path: 'hedge/dashboard/hedge-effectiveness', loadComponent: () => import('./features/analytics/hedge-effectiveness/hedge-effectiveness.component').then(m => m.HedgeEffectivenessComponent) },
   { path: 'hedge/dashboard/threshold-monitoring', loadComponent: () => import('./features/analytics/threshold-monitoring/threshold-monitoring.component').then(m => m.ThresholdMonitoringComponent) },
@@ -24,9 +25,13 @@ export const routes: Routes = [
   }
   ,
   { path: 'hawk-agent', redirectTo: 'hawk-agent/prompt-templates', pathMatch: 'full' },
-  { path: 'hawk-agent/prompt-templates', loadComponent: () => import('./features/hawk-agent/prompt-templates/prompt-templates.component').then(m => m.PromptTemplatesComponent) },
+  // Use the new Template Mode UI by default
+  { path: 'hawk-agent/prompt-templates', loadComponent: () => import('./features/hawk-agent/prompt-templates/prompt-templates-v2.component').then(m => m.PromptTemplatesV2Component) },
+  // Keep legacy UI accessible for fallback/testing
+  { path: 'hawk-agent/prompt-templates-legacy', loadComponent: () => import('./features/hawk-agent/prompt-templates/prompt-templates.component').then(m => m.PromptTemplatesComponent) },
   { path: 'hawk-agent/prompt-history', loadComponent: () => import('./features/hawk-agent/prompt-history/prompt-history.component').then(m => m.PromptHistoryComponent) },
   { path: 'hawk-agent/manual-mode', loadComponent: () => import('./features/hawk-agent/manual-mode/manual-mode.component').then(m => m.ManualModeComponent) },
+  { path: 'hawk-agent/agent-mode', loadComponent: () => import('./features/hawk-agent/agent-mode/agent-mode.component').then(m => m.AgentModeComponent) },
   // Operations
   { path: 'operations', redirectTo: 'operations/hedge-instructions', pathMatch: 'full' },
   { path: 'operations/hedge-instructions', loadComponent: () => import('./features/operations/hedge-instructions/hedge-instructions.component').then(m => m.HedgeInstructionsComponent) },

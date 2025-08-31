@@ -51,7 +51,8 @@ import { LayoutService } from './core/services/layout.service';
         <!-- Page Content -->
         <main class="flex-1 overflow-auto bg-gray-50 p-6">
           <div class="bg-white rounded-md min-h-full shadow-sm border border-gray-100 flex flex-col">
-            <div class="flex-1 overflow-auto">
+            <!-- Inner padding for breathing space on all screens -->
+            <div class="flex-1 overflow-auto p-4">
               <router-outlet></router-outlet>
             </div>
           </div>
@@ -131,10 +132,10 @@ export class AppComponent implements OnInit {
     this.currentSubMenuItems = [
       { label: 'Hedge Framework', icon: 'pi pi-chart-line', link: '/configuration/hedge-framework' },
       { label: 'Currency', icon: 'pi pi-money-bill', link: '/configuration/currency' },
-      { label: 'Positions & NAV', icon: 'pi pi-table', link: '/configuration/positions-nav' },
       { label: 'Entity', icon: 'pi pi-building', link: '/configuration/entity' },
       { label: 'Portfolios', icon: 'pi pi-briefcase', link: '/configuration/portfolios' },
       { label: 'Products', icon: 'pi pi-tags', link: '/configuration/products' },
+      { label: 'Prompt Templates', icon: 'pi pi-file-edit', link: '/configuration/prompt-templates' },
       { label: 'Threshold Configuration', icon: 'pi pi-sliders-h', link: '/configuration/threshold-configuration' },
       { label: 'Buffer Configuration', icon: 'pi pi-sliders-v', link: '/configuration/buffer-configuration' },
       { label: 'Business Rules Engine', icon: 'pi pi-cog', link: '/configuration/business-rules-engine' },
@@ -146,7 +147,7 @@ export class AppComponent implements OnInit {
   private setAnalyticsSubmenu() {
     this.currentSubMenuItems = [
       { label: 'Dashboard', icon: 'pi pi-th-large', link: '/hedge/dashboard', exact: true },
-      { label: 'SFX Positions', icon: 'pi pi-table', link: '/hedge/dashboard/sfx-positions' },
+      { label: 'SFX Positions', icon: 'pi pi-table', link: '/hedge/dashboard/positions-nav' },
       { label: 'Hedging Instruments', icon: 'pi pi-tags', link: '/hedge/dashboard/hedging-instruments' },
       { label: 'Hedge Effectiveness', icon: 'pi pi-chart-line', link: '/hedge/dashboard/hedge-effectiveness' },
       { label: 'Threshold Monitoring', icon: 'pi pi-sliders-h', link: '/hedge/dashboard/threshold-monitoring' },

@@ -1,170 +1,79 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ChartModule } from 'primeng/chart';
 import { CardModule } from 'primeng/card';
+import { DropdownModule } from 'primeng/dropdown';
+import { DashboardService, DashboardMetrics } from './dashboard.service';
+import { ActivityTrackerService, Activity } from './activity-tracker.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, ChartModule, CardModule],
-  template: `
-    <div class="dashboard-container">
-      <!-- Page Header -->
-      <div class="mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-2">Hedge Accounting Dashboard</h2>
-        <p class="text-gray-600">Overview of hedge accounting positions and performance metrics</p>
-      </div>
-
-      <!-- KPI Cards -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <i class="pi pi-dollar text-2xl text-blue-600"></i>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Total Hedged</p>
-              <p class="text-2xl font-bold text-gray-900">$2.4B</p>
-              <p class="text-sm text-green-600">+5.2% from last month</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <i class="pi pi-chart-line text-2xl text-green-600"></i>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Hedge Effectiveness</p>
-              <p class="text-2xl font-bold text-gray-900">98.7%</p>
-              <p class="text-sm text-green-600">Within range</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <i class="pi pi-building text-2xl text-purple-600"></i>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Active Entities</p>
-              <p class="text-2xl font-bold text-gray-900">24</p>
-              <p class="text-sm text-blue-600">Across 8 countries</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <i class="pi pi-exclamation-triangle text-2xl text-orange-600"></i>
-            </div>
-            <div class="ml-4">
-              <p class="text-sm font-medium text-gray-600">Risk Alerts</p>
-              <p class="text-2xl font-bold text-gray-900">3</p>
-              <p class="text-sm text-orange-600">Require attention</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts Section -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Hedge Ratio by Currency Chart -->
-        <p-card header="Hedge Ratio by Currency" class="chart-card">
-          <p-chart 
-            type="doughnut" 
-            [data]="currencyChartData" 
-            [options]="chartOptions"
-            class="w-full h-80">
-          </p-chart>
-        </p-card>
-
-        <!-- Monthly Hedge Performance Chart -->
-        <p-card header="Monthly Hedge Performance" class="chart-card">
-          <p-chart 
-            type="line" 
-            [data]="performanceChartData" 
-            [options]="lineChartOptions"
-            class="w-full h-80">
-          </p-chart>
-        </p-card>
-      </div>
-
-      <!-- Recent Activities -->
-      <div class="mt-8">
-        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div class="px-6 py-4 border-b border-gray-200">
-            <h3 class="text-lg font-medium text-gray-900">Recent Activities</h3>
-          </div>
-          <div class="p-6">
-            <div class="space-y-4">
-              <div *ngFor="let activity of recentActivities" class="flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-md">
-                <div class="flex-shrink-0">
-                  <i [class]="activity.icon + ' text-lg'" [ngClass]="activity.iconColor"></i>
-                </div>
-                <div class="flex-1">
-                  <p class="text-sm font-medium text-gray-900">{{ activity.title }}</p>
-                  <p class="text-sm text-gray-600">{{ activity.description }}</p>
-                </div>
-                <div class="text-sm text-gray-500">
-                  {{ activity.timestamp }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+  imports: [CommonModule, FormsModule, ChartModule, CardModule, DropdownModule],
+  templateUrl: './dashboard.component.html',
+  styleUrls: ['./dashboard.component.css']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   currencyChartData: any;
-  performanceChartData: any;
+  positionValueChartData: any;
+  navVsPositionChartData: any;
+  entityExposureChartData: any;
+  hedgeCoverageChartData: any;
+  positionStatusChartData: any;
   chartOptions: any;
   lineChartOptions: any;
-  recentActivities: any[] = [];
+  barChartOptions: any;
+  recentActivities: Activity[] = [];
+
+  // KPIs
+  totalHedged = 0;
+  totalHedgedDisplay = '$0';
+  hedgeEffectiveness = 0;
+  activeEntities = 0;
+  riskAlerts = 0;
+
+  kpiCards: any[] = [];
+
+  // Currency filtering
+  availableCurrencies: any[] = [];
+  selectedCurrency: any = null;
+  allMetricsData: DashboardMetrics | null = null;
+
+  constructor(
+    private dashboardService: DashboardService,
+    private activityTracker: ActivityTrackerService,
+    private router: Router
+  ) {}
 
   ngOnInit() {
-    this.initializeChartData();
-    this.loadRecentActivities();
+    this.initializeChartOptions();
+    
+    // Initialize services
+    this.dashboardService.init();
+    this.activityTracker.init();
+    
+    // Subscribe to data streams
+    this.dashboardService.metrics$.subscribe((m) => {
+      if (!m) return;
+      this.allMetricsData = m;
+      this.updateAvailableCurrencies(m);
+      this.applyMetrics(m);
+    });
+    
+    this.activityTracker.activities$.subscribe((activities) => {
+      this.recentActivities = activities;
+    });
   }
 
-  initializeChartData() {
-    this.currencyChartData = {
-      labels: ['USD', 'EUR', 'SGD', 'JPY', 'GBP'],
-      datasets: [
-        {
-          data: [35, 25, 20, 12, 8],
-          backgroundColor: [
-            '#3B82F6',
-            '#10B981',
-            '#F59E0B',
-            '#EF4444',
-            '#8B5CF6'
-          ],
-          borderWidth: 2,
-          borderColor: '#ffffff'
-        }
-      ]
-    };
+  ngOnDestroy() {
+    this.activityTracker.destroy();
+    this.dashboardService.destroy();
+  }
 
-    this.performanceChartData = {
-      labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-      datasets: [
-        {
-          label: 'Hedge Effectiveness %',
-          data: [98.2, 97.8, 98.5, 98.9, 98.1, 98.7],
-          borderColor: '#3B82F6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          tension: 0.4,
-          fill: true
-        }
-      ]
-    };
-
+  initializeChartOptions() {
+    
     this.chartOptions = {
       responsive: true,
       maintainAspectRatio: false,
@@ -185,44 +94,198 @@ export class DashboardComponent implements OnInit {
       },
       scales: {
         y: {
-          beginAtZero: false,
-          min: 95,
-          max: 100
+          beginAtZero: true
+        }
+      }
+    };
+
+    this.barChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'top'
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
         }
       }
     };
   }
 
-  loadRecentActivities() {
-    this.recentActivities = [
+  private applyMetrics(m: DashboardMetrics) {
+    this.totalHedged = m.totalHedged;
+    this.totalHedgedDisplay = this.formatCurrency(m.totalHedged);
+    this.hedgeEffectiveness = m.hedgeEffectiveness;
+    this.activeEntities = m.activeEntities;
+    this.riskAlerts = m.riskAlerts;
+
+    // Update KPI Cards array for the template
+    this.kpiCards = [
       {
-        title: 'New hedge relationship established',
-        description: 'EUR/USD forward contract for Entity ABC',
-        timestamp: '2 hours ago',
-        icon: 'pi pi-plus-circle',
-        iconColor: 'text-green-600'
+        title: 'Total Hedged',
+        value: this.totalHedgedDisplay,
+        icon: 'pi pi-dollar',
+        change: (m.totalHedgedChangePct ?? 0) >= 0 ? `+${m.totalHedgedChangePct?.toFixed(1)}%` : `${m.totalHedgedChangePct?.toFixed(1)}%`,
+        changeType: (m.totalHedgedChangePct ?? 0) >= 0 ? 'positive' : 'negative'
       },
       {
-        title: 'Hedge effectiveness test completed',
-        description: 'All tests passed for Q4 2024',
-        timestamp: '4 hours ago',
-        icon: 'pi pi-check-circle',
-        iconColor: 'text-blue-600'
+        title: 'Hedge Effectiveness',
+        value: `${m.hedgeEffectiveness.toFixed(1)}%`,
+        icon: 'pi pi-chart-line',
+        change: (m.hedgeEffectivenessChangePct ?? 0) >= 0 ? `+${m.hedgeEffectivenessChangePct?.toFixed(1)}%` : `${m.hedgeEffectivenessChangePct?.toFixed(1)}%`,
+        changeType: (m.hedgeEffectivenessChangePct ?? 0) >= 0 ? 'positive' : 'negative'
       },
       {
-        title: 'Risk threshold exceeded',
-        description: 'GBP exposure in London branch',
-        timestamp: '6 hours ago',
+        title: 'Active Entities',
+        value: m.activeEntities.toString(),
+        icon: 'pi pi-building',
+        change: (m.activeEntitiesChange ?? 0) > 0 ? `+${m.activeEntitiesChange}` : `${m.activeEntitiesChange ?? 0}`,
+        changeType: (m.activeEntitiesChange ?? 0) === 0 ? 'neutral' : (m.activeEntitiesChange ?? 0) > 0 ? 'positive' : 'negative'
+      },
+      {
+        title: 'Risk Alerts',
+        value: m.riskAlerts.toString(),
         icon: 'pi pi-exclamation-triangle',
-        iconColor: 'text-orange-600'
-      },
-      {
-        title: 'Monthly report generated',
-        description: 'Hedge accounting summary for November',
-        timestamp: '1 day ago',
-        icon: 'pi pi-file-pdf',
-        iconColor: 'text-purple-600'
+        change: (m.riskAlertsChange ?? 0) > 0 ? `+${m.riskAlertsChange}` : `${m.riskAlertsChange ?? 0}`,
+        changeType: (m.riskAlertsChange ?? 0) > 0 ? 'negative' : (m.riskAlertsChange ?? 0) < 0 ? 'positive' : 'neutral'
       }
     ];
+
+    // Doughnut chart from currency breakdown
+    const colors = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#6366F1'];
+    this.currencyChartData = {
+      labels: m.currencyBreakdown.map(x => x.label),
+      datasets: [{
+        data: m.currencyBreakdown.map(x => Math.abs(x.value)),
+        backgroundColor: colors.slice(0, m.currencyBreakdown.length),
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    };
+
+    // Position Value Over Time Chart
+    this.positionValueChartData = {
+      labels: m.positionValueOverTime.map(x => x.label),
+      datasets: [{
+        label: 'Position Value (USD)',
+        data: m.positionValueOverTime.map(x => x.value),
+        borderColor: '#10B981',
+        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    };
+
+    // NAV vs Position Comparison Chart
+    this.navVsPositionChartData = {
+      labels: m.navVsPosition.map(x => x.label),
+      datasets: [{
+        label: 'NAV',
+        data: m.navVsPosition.map(x => x.nav),
+        borderColor: '#3B82F6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)'
+      }, {
+        label: 'Position',
+        data: m.navVsPosition.map(x => x.position),
+        borderColor: '#F59E0B',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)'
+      }]
+    };
+
+    // Entity Exposure Distribution Chart
+    this.entityExposureChartData = {
+      labels: m.entityExposure.map(x => x.label),
+      datasets: [{
+        label: 'Exposure (USD)',
+        data: m.entityExposure.map(x => x.value),
+        backgroundColor: [
+          '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', 
+          '#EC4899', '#14B8A6', '#F97316', '#6366F1', '#84CC16'
+        ]
+      }]
+    };
+
+    // Hedge Coverage Ratio Trend Chart
+    this.hedgeCoverageChartData = {
+      labels: m.hedgeCoverageRatio.map(x => x.label),
+      datasets: [{
+        label: 'Coverage Ratio %',
+        data: m.hedgeCoverageRatio.map(x => x.value),
+        borderColor: '#8B5CF6',
+        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+        tension: 0.4,
+        fill: true
+      }]
+    };
+
+    // Position Status Distribution Chart
+    this.positionStatusChartData = {
+      labels: m.positionStatusDistribution.map(x => x.label),
+      datasets: [{
+        data: m.positionStatusDistribution.map(x => x.value),
+        backgroundColor: m.positionStatusDistribution.map(x => x.color),
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
+    };
+  }
+
+  private updateAvailableCurrencies(m: DashboardMetrics) {
+    // Extract unique currencies from currency breakdown
+    const currencies = m.currencyBreakdown.map(c => c.label);
+    this.availableCurrencies = [
+      { label: 'All Currencies', value: null },
+      ...currencies.map(currency => ({ label: currency, value: currency }))
+    ];
+    
+    // Set default selection if not already set
+    if (!this.selectedCurrency) {
+      this.selectedCurrency = this.availableCurrencies[0];
+    }
+  }
+
+  onCurrencyChange() {
+    if (this.allMetricsData) {
+      this.refreshChartsWithFilter();
+    }
+  }
+
+  private refreshChartsWithFilter() {
+    if (!this.allMetricsData) return;
+    
+    const selectedCurrency = this.selectedCurrency?.value;
+    
+    // Refresh data with currency filter
+    this.dashboardService.refreshWithCurrencyFilter(selectedCurrency);
+  }
+
+  private formatCurrency(n: number) {
+    // Compact currency for display
+    try {
+      return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(n);
+    } catch {
+      return `$${(n/1_000_000).toFixed(1)}M`;
+    }
+  }
+
+  // Optional view handler for Recent Activities action button
+  viewRow(activity: Activity) {
+    try {
+      // If an external link is provided, prefer to open it
+      const link = (activity as any)?.metadata?.link as string | undefined;
+      if (link) {
+        window.open(link, '_blank');
+        return;
+      }
+    } catch {}
+    // Navigate to Prompt History with deep-link by msg_uid or instruction_id
+    const meta: any = (activity as any)?.metadata || {};
+    const queryParams: any = {};
+    if (meta.msg_uid || (activity as any).msg_uid) queryParams.msg_uid = meta.msg_uid || (activity as any).msg_uid;
+    if (meta.instruction_id || (activity as any).instruction_id) queryParams.instruction_id = meta.instruction_id || (activity as any).instruction_id;
+    this.router.navigate(['/hawk-agent/prompt-history'], { queryParams });
   }
 }

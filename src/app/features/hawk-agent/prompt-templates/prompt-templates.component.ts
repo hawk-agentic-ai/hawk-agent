@@ -1,4 +1,4 @@
-import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl, SafeHtml } from '@angular/platform-browser';
@@ -6,6 +6,7 @@ import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { AGENT_IFRAME_URL, AGENT_IFRAME_ORIGIN } from '../../../core/config/app-config';
 import { CurrencyService } from '../../../shared/services/currency.service';
 import { HawkAgentSimpleService } from '../services/hawk-agent-simple.service';
+import { PromptTemplatesService, PromptTemplate } from '../../configuration/prompt-templates/prompt-templates.service';
 import { DialogModule } from 'primeng/dialog';
 
 @Component({
@@ -22,409 +23,24 @@ import { DialogModule } from 'primeng/dialog';
         </div>
         <!-- Toggle Button -->
         <div class="flex items-center gap-3">
-          <span class="text-sm text-gray-600">Template Mode</span>
+          <span class="text-sm"
+                [ngClass]="isAgentMode ? 'text-gray-400' : 'text-blue-700 font-medium'">Template Mode</span>
           <label class="inline-flex items-center cursor-pointer">
-            <input type="checkbox" class="sr-only" [(ngModel)]="isAgentMode">
-            <div class="relative">
-              <div class="w-11 h-6 bg-gray-200 rounded-full shadow-inner" 
-                   [class.bg-blue-600]="isAgentMode"></div>
-              <div class="absolute w-4 h-4 bg-white rounded-full shadow inset-y-1 left-1 transition-transform duration-200"
-                   [class.transform]="isAgentMode"
+            <input type="checkbox" class="sr-only" [(ngModel)]="isAgentMode" (ngModelChange)="onAgentModeToggle($event)">
+            <div class="relative" role="switch" [attr.aria-checked]="isAgentMode">
+              <div class="w-12 h-7 rounded-full transition-colors duration-200 shadow-inner ring-1"
+                   [ngClass]="isAgentMode ? 'bg-blue-600 ring-blue-600' : 'bg-gray-300 ring-gray-300'"></div>
+              <div class="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow transform transition duration-200"
                    [class.translate-x-5]="isAgentMode"></div>
             </div>
           </label>
-          <span class="text-sm text-gray-600">Agent Mode</span>
+          <span class="text-sm"
+                [ngClass]="isAgentMode ? 'text-blue-700 font-medium' : 'text-gray-400'">Agent Mode</span>
         </div>
       </div>
 
-      <!-- Template Mode Content -->
-      <div *ngIf="!isAgentMode" class="space-y-6 max-w-full overflow-hidden flex-1 flex flex-col">
-        <!-- Template Families Tabs -->
-        <div class="p-2 flex flex-wrap gap-2">
-          <button *ngFor="let type of instructionTypes; trackBy: trackByKey"
-                  (click)="onInstructionTypeSelect(type.key)"
-                  class="px-3 py-1.5 rounded-md text-sm transition-colors"
-                  [ngClass]="activeInstructionType === type.key ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
-            {{ type.label }} <span class="text-xs opacity-75">({{ type.count }})</span>
-          </button>
-        </div>
-
-        <!-- Quick Access & Filters -->
-        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <!-- Recent Templates -->
-          <div *ngIf="recentTemplates.length > 0" class="flex items-center gap-2">
-            <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Recent</span>
-            <div class="flex gap-2">
-              <button *ngFor="let recent of recentTemplates.slice(0, 3)"
-                      (click)="loadRecentTemplate(recent)"
-                      class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors">
-                {{ recent.label }}
-              </button>
-            </div>
-          </div>
-          
-          <!-- Filters -->
-          <div class="flex items-center gap-3">
-            <div class="flex items-center gap-2">
-              <label class="text-sm font-medium text-gray-700">Type:</label>
-              <select class="filter-input" style="width: 175px;" [(ngModel)]="activeCategory" (change)="onCategorySelect(activeCategory)">
-                <option *ngFor="let c of getCurrentCategories(); trackBy: trackByKey" [value]="c.key">
-                  {{ c.label }} ({{ c.count }})
-                </option>
-              </select>
-            </div>
-            <div class="flex items-center gap-2">
-              <label class="text-sm font-medium text-gray-700">Style:</label>
-              <select class="filter-input w-36" [(ngModel)]="promptStyle">
-                <option value="basic">Basic</option>
-                <option value="conversational">Conversational</option>
-                <option value="scenario">Scenario-based</option>
-                <option value="comparative">Comparative</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Template Selection and Parameters -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          <!-- Template Selection -->
-          <div class="divide-y divide-gray-100">
-            <div class="px-6 py-4">
-              <h3 class="text-lg font-semibold text-gray-900">Select Template</h3>
-              <p class="text-sm text-gray-600 mt-1">Choose a template for {{ getCategoryLabel(activeCategory) }}</p>
-            </div>
-            <div class="divide-y divide-gray-50">
-              <label *ngFor="let p of currentPrompts; let i = index; trackBy: trackByIndex" 
-                     class="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors">
-                <div class="flex items-center justify-center">
-                  <input type="radio" name="prompt" class="text-blue-600"
-                         [checked]="selectedPromptIndex === i"
-                         (change)="selectPrompt(i)" />
-                </div>
-                <div class="flex items-center gap-4 flex-1 min-w-0">
-                  <!-- Template Number Column (Fixed Width) -->
-                  <div class="w-20 flex-shrink-0 text-center">
-                    <div class="text-sm font-medium text-gray-900">Template {{ i + 1 }}</div>
-                  </div>
-                  
-                  <!-- Template Text Column (Flexible) -->
-                  <div class="flex-1 min-w-0">
-                    <div class="text-sm text-gray-700 leading-relaxed">{{ p.template }}</div>
-                  </div>
-                  
-                  <!-- Metrics Column (Fixed Width) -->
-                  <div class="w-24 flex-shrink-0 flex items-center justify-center gap-2">
-                    <!-- Usage Count Circle -->
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium text-gray-700 bg-blue-100"
-                         [title]="p.usageCount + ' uses'">
-                      {{ formatUsageCount(p.usageCount) }}
-                    </div>
-                    
-                    <!-- Success Rate Circle -->
-                    <div class="flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium text-gray-700 bg-green-100"
-                         [title]="p.successRate + '% success rate'">
-                      {{ p.successRate }}%
-                    </div>
-                  </div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <!-- Parameters Section -->
-          <div *ngIf="selectedPromptIndex >= 0" class="border-t border-gray-200 bg-gray-50">
-            <div class="px-6 py-4">
-              <h4 class="text-md font-semibold text-gray-900 mb-4">Configure Parameters</h4>
-              
-              <!-- Live Preview -->
-              <div class="bg-white rounded-lg p-4 border border-gray-300 mb-4">
-                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Live Preview</div>
-                <div class="text-sm text-gray-900 font-mono leading-relaxed flex flex-wrap items-center gap-2">
-                  <ng-container *ngFor="let part of previewParts; trackBy: trackByPart">
-                    <span *ngIf="part.type === 'text'" class="text-gray-800">{{ part.text }}</span>
-                    <ng-container *ngIf="part.type === 'placeholder'">
-                      <input *ngIf="part.name === 'amount'" 
-                             type="number" 
-                             class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-24 font-semibold" 
-                             placeholder="0.00" 
-                             [(ngModel)]="amount" />
-                      <input *ngIf="part.name === 'date'" 
-                             type="date" 
-                             class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-36 font-semibold" 
-                             [(ngModel)]="date" />
-                      <select *ngIf="part.name !== 'amount' && part.name !== 'date'" 
-                              class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-auto min-w-32 font-semibold"
-                              [ngModel]="placeholderValues[part.name]"
-                              (ngModelChange)="onPlaceholderChange(part.name, $event)">
-                        <option *ngFor="let opt of getOptionsFor(part.name); trackBy: trackByIndex" [value]="opt">{{ opt }}</option>
-                      </select>
-                    </ng-container>
-                  </ng-container>
-                </div>
-              </div>
-
-
-              <!-- Submit Button -->
-              <div class="flex items-center justify-between">
-                <button class="btn btn-secondary" (click)="saveAsTemplate()">
-                  <i class="pi pi-bookmark"></i>
-                  Save Template
-                </button>
-                <button class="btn btn-primary btn-lg" (click)="usePrompt()" [disabled]="isLoading || !isFormValid()">
-                  <span *ngIf="isLoading" class="flex items-center gap-2">
-                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Processing...
-                  </span>
-                  <span *ngIf="!isLoading" class="flex items-center gap-2">
-                    <i class="pi pi-send"></i>
-                    Submit
-                  </span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Results Section -->
-        <div #resultsSection *ngIf="showResults" class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 w-full max-w-none overflow-hidden flex-shrink-0">
-          <div class="divide-y divide-gray-100">
-            <div class="px-6 py-4 flex items-center justify-between">
-              <div>
-                <h3 class="text-lg font-semibold text-gray-900">Results</h3>
-                <p class="text-sm text-gray-600 mt-1">{{ lastQuery }}</p>
-              </div>
-              <div class="flex items-center gap-2">
-                <button class="btn btn-tertiary" (click)="clearResults()">
-                  <i class="pi pi-times"></i>
-                  Clear Results
-                </button>
-              </div>
-            </div>
-
-            <div class="p-6 max-w-full overflow-hidden">
-              <!-- Loading State -->
-              <div *ngIf="isLoading" class="text-center py-12">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                <p class="mt-4 text-gray-600">Processing your request...</p>
-                <div class="w-64 bg-gray-200 rounded-full h-2 mx-auto mt-2">
-                  <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 60%"></div>
-                </div>
-              </div>
-
-              <!-- Results -->
-              <div *ngIf="!isLoading && apiResponse" class="space-y-6">
-                <!-- Status Badge -->
-                <div class="flex items-center gap-3">
-                  <div class="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium"
-                       [ngClass]="getStatusBadgeClass()">
-                    <i [class]="getStatusIcon()"></i>
-                    {{ getResultStatus() }}
-                  </div>
-                  <span class="text-xs text-gray-500">{{ getCurrentDateTime() }}</span>
-                </div>
-
-                <!-- Unique Identifiers -->
-                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
-                  <div class="text-sm font-medium text-gray-700 mb-3">Request Identifiers</div>
-                  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="flex items-center gap-2">
-                      <i class="pi pi-id-card text-gray-500"></i>
-                      <div>
-                        <div class="text-xs text-gray-500">Message UID</div>
-                        <div class="font-mono text-sm font-semibold text-gray-800">{{ currentMsgUid }}</div>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <i class="pi pi-bookmark text-gray-500"></i>
-                      <div>
-                        <div class="text-xs text-gray-500">Instruction ID</div>
-                        <div class="font-mono text-sm font-semibold text-gray-800">{{ currentInstructionId }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Key Information -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                    <div class="text-sm font-medium text-blue-900">Amount</div>
-                    <div class="text-lg font-semibold text-blue-700">{{ amount?.toLocaleString() || 'N/A' }} {{ currency }}</div>
-                  </div>
-                  <div class="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <div class="text-sm font-medium text-green-900">Date</div>
-                    <div class="text-lg font-semibold text-green-700">{{ date || 'N/A' }}</div>
-                  </div>
-                  <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
-                    <div class="text-sm font-medium text-purple-900">Type</div>
-                    <div class="text-lg font-semibold text-purple-700">{{ getCategoryLabel(activeCategory) }}</div>
-                  </div>
-                </div>
-
-                <!-- Main Response -->
-                <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 overflow-hidden w-full">
-                  <div class="p-6 max-w-full overflow-hidden">
-                    <div class="w-full max-w-none overflow-auto max-h-96">
-                      <div class="text-gray-800 leading-relaxed text-sm font-sans w-full prose prose-sm max-w-none" 
-                           style="word-break: break-word; overflow-wrap: anywhere; max-width: 100%; font-family: inherit;"
-                           [innerHTML]="getFormattedResponse()"></div>
-                      
-                      <!-- Streaming indicator at the end of content -->
-                      <div *ngIf="isStreaming" class="flex items-center gap-2 mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                        <span class="text-sm text-blue-700 font-medium">Receiving response...</span>
-                        <div class="flex gap-1 ml-2">
-                          <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
-                          <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
-                          <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div *ngIf="getResponseMetadata()" class="px-6 py-3 bg-blue-100 border-t border-blue-200">
-                    <div class="text-xs text-blue-700 font-mono">{{ getResponseMetadata() }}</div>
-                  </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="flex flex-wrap gap-3 mb-6">
-                  <button class="btn btn-secondary" (click)="exportReport()">
-                    <i class="pi pi-download"></i>
-                    Export Report
-                  </button>
-                  <button class="btn btn-secondary" (click)="createTicket()">
-                    <i class="pi pi-ticket"></i>
-                    Create Ticket
-                  </button>
-                  <button class="btn btn-secondary" (click)="scheduleReview()">
-                    <i class="pi pi-calendar"></i>
-                    Schedule Review
-                  </button>
-                  <button class="btn btn-secondary" (click)="shareResults()">
-                    <i class="pi pi-share-alt"></i>
-                    Share
-                  </button>
-                </div>
-
-                <!-- Rating System -->
-                <div class="border-t border-gray-200 pt-6">
-                  <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                      <h4 class="text-sm font-medium text-gray-900 mb-2">Rate this response</h4>
-                      <p class="text-xs text-gray-600 mb-3">Help improve template accuracy by rating the quality of this result</p>
-                      
-                      <div class="flex items-center gap-2">
-                        <!-- Star Rating -->
-                        <div class="flex items-center gap-1">
-                          <button *ngFor="let star of [1,2,3,4,5]; trackBy: trackByIndex"
-                                  (click)="setRating(star)"
-                                  class="text-lg transition-colors duration-200"
-                                  [class]="star <= currentRating ? 'text-yellow-400 hover:text-yellow-500' : 'text-gray-300 hover:text-yellow-300'">
-                            <i class="pi pi-star-fill"></i>
-                          </button>
-                        </div>
-                        
-                        <!-- Quick Rating Buttons -->
-                        <div class="flex items-center gap-2 ml-4">
-                          <button class="px-3 py-1 text-xs rounded-full border transition-colors"
-                                  [class]="currentRating >= 4 ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-green-50'"
-                                  (click)="setRating(5)">
-                            <i class="pi pi-check-circle mr-1"></i>
-                            Correct
-                          </button>
-                          <button class="px-3 py-1 text-xs rounded-full border transition-colors"
-                                  [class]="currentRating <= 2 ? 'bg-red-100 text-red-700 border-red-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-red-50'"
-                                  (click)="setRating(1)">
-                            <i class="pi pi-times-circle mr-1"></i>
-                            Incorrect
-                          </button>
-                        </div>
-                        
-                        <!-- Completion Status Buttons -->
-                        <div class="flex items-center gap-2 ml-4 border-l border-gray-300 pl-4">
-                          <button class="px-3 py-1 text-xs rounded-full border transition-colors"
-                                  [class]="completionStatus === 'complete' ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-blue-50'"
-                                  (click)="setCompletionStatus('complete')">
-                            <i class="pi pi-check mr-1"></i>
-                            Complete
-                          </button>
-                          <button class="px-3 py-1 text-xs rounded-full border transition-colors"
-                                  [class]="completionStatus === 'incomplete' ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-orange-50'"
-                                  (click)="setCompletionStatus('incomplete')">
-                            <i class="pi pi-exclamation-triangle mr-1"></i>
-                            Incomplete
-                          </button>
-                        </div>
-                      </div>
-
-                      <!-- Rating Feedback -->
-                      <div *ngIf="currentRating > 0" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div class="flex items-center gap-2 text-sm">
-                          <i class="pi pi-info-circle text-blue-600"></i>
-                          <span class="text-blue-800">
-                            <span *ngIf="currentRating >= 4">Thank you! This positive feedback helps improve template accuracy.</span>
-                            <span *ngIf="currentRating === 3">Thank you for the feedback. We'll work to improve this template.</span>
-                            <span *ngIf="currentRating <= 2">Thanks for reporting this issue. We'll review and improve this template.</span>
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <!-- Rating Stats -->
-                    <div class="text-right ml-6">
-                      <div class="text-xs text-gray-500">Template Success Rate</div>
-                      <div class="text-lg font-semibold" [class]="getSuccessRateClass(getCurrentTemplateSuccessRate())">
-                        {{ getCurrentTemplateSuccessRate() }}%
-                      </div>
-                      <div class="text-xs text-gray-500">{{ getCurrentTemplateUsageCount() }} total uses</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- History Tab -->
-        <div *ngIf="showHistory" class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6">
-          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-            <h3 class="text-lg font-semibold text-gray-900">Query History</h3>
-            <button class="btn btn-tertiary" (click)="toggleHistory()">
-              <i class="pi pi-times"></i>
-            </button>
-          </div>
-          <div class="divide-y divide-gray-100">
-            <div *ngFor="let item of queryHistory; let i = index" 
-                 class="px-6 py-4 hover:bg-gray-50 cursor-pointer"
-                 (click)="loadHistoryItem(item)">
-              <div class="flex items-start justify-between">
-                <div class="flex-1">
-                  <div class="text-sm font-medium text-gray-900">{{ item.query }}</div>
-                  <div class="text-xs text-gray-500 mt-1">{{ formatDate(item.timestamp) }}</div>
-                  <div *ngIf="item.msgUid" class="flex items-center gap-4 mt-2">
-                    <div class="flex items-center gap-1">
-                      <i class="pi pi-id-card text-xs text-gray-400"></i>
-                      <span class="text-xs font-mono text-gray-600">{{ item.msgUid }}</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <i class="pi pi-bookmark text-xs text-gray-400"></i>
-                      <span class="text-xs font-mono text-gray-600">{{ item.instructionId || 'N/A' }}</span>
-                    </div>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2">
-                  <span class="px-2 py-1 text-xs rounded-full" [ngClass]="getHistoryStatusClass(item.status)">
-                    {{ item.status }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Agent Mode Content -->
+      <!-- Agent Mode Content (placed directly under header) -->
       <div *ngIf="isAgentMode" class="space-y-6 flex-1 flex flex-col min-h-0">
-        <!-- Themed Container with Skeleton Loader -->
         <div class="bg-white rounded-lg border border-gray-200 overflow-hidden relative flex-1 min-h-0">
           <!-- Floating prompt toast (does not affect iframe layout) -->
           <div *ngIf="incomingPrompt && showPromptToast && !isMinimized" class="absolute z-30 top-4 right-4 max-w-xl pointer-events-none">
@@ -465,35 +81,478 @@ import { DialogModule } from 'primeng/dialog';
               </button>
             </div>
           </div>
-          <!-- Skeleton while loading -->
-          <div *ngIf="!iframeLoaded && !loadNotice" class="absolute inset-0 p-6">
-            <div class="animate-pulse space-y-4">
-              <div class="h-4 bg-gray-200 rounded w-1/3"></div>
-              <div class="h-4 bg-gray-200 rounded w-1/2"></div>
-              <div class="h-64 bg-gray-200 rounded"></div>
-            </div>
-          </div>
-
-          <!-- Notice if iframe fails to load (likely blocked by embed policy) -->
-          <div *ngIf="loadNotice && !iframeLoaded" class="absolute inset-0 p-6 flex items-center justify-center">
-            <div class="text-center text-sm text-gray-600">
-              <div class="mb-2 font-medium text-gray-800">Unable to load embedded agent</div>
-              <div>It may be blocked by the site's embed policy (X-Frame-Options/CSP).</div>
-            </div>
-          </div>
-
-          <!-- Iframe wrapper to retain sizing inside container -->
+          <!-- Iframe wrapper (top) -->
           <div class="w-full h-full flex-1 min-h-0">
             <iframe
               #agentFrame
               [src]="agentUrlSafe"
-              (load)="onIframeLoad()"
               allow="microphone; clipboard-write;"
               frameborder="0"
               style="width: 100%; height: 100%; min-height: 700px; display: block;"
-              [class.opacity-0]="!iframeLoaded"
               class="transition-opacity duration-300">
             </iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template Mode Content -->
+      <div *ngIf="!isAgentMode" class="flex flex-col space-y-6">
+        <!-- Template Families Tabs -->
+        <div class="bg-white border-b border-gray-200 px-6 py-3">
+          <div class="flex flex-wrap gap-2">
+            <button *ngFor="let type of instructionTypes; trackBy: trackByKey"
+                    (click)="onInstructionTypeSelect(type.key)"
+                    class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    [ngClass]="activeInstructionType === type.key ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'">
+              {{ type.label }} <span class="text-xs opacity-75">({{ type.count }})</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Main Content with Sidebar -->
+        <div class="flex bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" style="min-height: 600px;">
+          <!-- Category Sidebar -->
+          <div class="w-72 bg-gray-50 border-r border-gray-200 flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="px-6 py-4 border-b border-gray-200 bg-white">
+              <h3 class="text-lg font-semibold text-gray-900">Categories</h3>
+              <p class="text-sm text-gray-600 mt-1">{{ getSelectedInstructionTypeLabel() }}</p>
+            </div>
+            
+            <!-- Recent Templates Section -->
+            <div *ngIf="recentTemplates.length > 0" class="p-4 border-b border-gray-200">
+              <h4 class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Recent</h4>
+              <div class="space-y-1">
+                <button *ngFor="let recent of recentTemplates.slice(0, 3)"
+                        (click)="loadRecentTemplate(recent)"
+                        class="w-full text-left px-3 py-2 text-xs bg-white hover:bg-blue-50 hover:text-blue-700 rounded-md text-gray-700 transition-colors border border-gray-200">
+                  {{ recent.label }}
+                </button>
+              </div>
+            </div>
+            
+            <!-- Category List -->
+            <div class="flex-1 overflow-y-auto">
+              <div class="p-4 space-y-3">
+                <button 
+                  *ngFor="let category of getCurrentCategories(); trackBy: trackByKey" 
+                  (click)="onCategorySelect(category.key)"
+                  [class]="getCategoryTabClass(category.key)"
+                  class="w-full text-left px-5 py-4 rounded-lg text-sm font-medium transition-all duration-200 group">
+                  <div class="flex items-center justify-between">
+                    <span class="flex-1">{{ category.label }}</span>
+                    <span class="px-3 py-1 rounded-full text-xs font-medium"
+                          [class]="activeCategory === category.key ? 'bg-white bg-opacity-20 text-white' : 'bg-gray-200 text-gray-700'">
+                      {{ category.count }}
+                    </span>
+                  </div>
+                </button>
+                
+                <div *ngIf="getCurrentCategories().length === 0" class="text-center py-12 text-gray-500">
+                  <div class="text-4xl mb-2">📂</div>
+                  <div class="text-sm font-medium">No categories available</div>
+                  <div class="text-xs text-gray-400 mt-1">Select a different family type above</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Main Content Area -->
+          <div class="flex-1 flex flex-col min-w-0">
+
+            <!-- Header for Selected Category -->
+            <div class="bg-white border-b border-gray-200 px-6 py-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">{{ getSelectedCategoryLabel() }}</h3>
+                  <p class="text-sm text-gray-600 mt-1">{{ currentPrompts.length }} template{{ currentPrompts.length !== 1 ? 's' : '' }} available</p>
+                </div>
+                <div class="text-sm text-gray-500">
+                  Template Mode
+                </div>
+              </div>
+            </div>
+
+            <!-- Template Selection -->
+            <div class="bg-white flex-1 overflow-hidden flex flex-col">
+              <div class="px-6 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-900">Select Template</h3>
+              </div>
+              
+              <!-- Template List -->
+              <div class="flex-1 overflow-y-auto">
+                <div class="divide-y divide-gray-50">
+              <label *ngFor="let p of currentPrompts; let i = index; trackBy: trackByIndex" 
+                     class="flex items-center gap-4 px-6 py-4 cursor-pointer hover:bg-gray-50 transition-colors">
+                <div class="flex items-center justify-center">
+                  <input type="radio" name="prompt" class="text-blue-600"
+                         [checked]="selectedPromptIndex === i"
+                         (change)="selectPrompt(i)" />
+                </div>
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                  <!-- Template Number Column (Fixed Width) -->
+                  <div class="w-20 flex-shrink-0 text-center">
+                    <div class="text-sm font-medium text-gray-900">Template {{ i + 1 }}</div>
+                  </div>
+                  
+                  <!-- Template Text Column (Flexible) -->
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm text-gray-700 leading-relaxed">{{ p.template }}</div>
+                    <div *ngIf="p.isDynamic" class="text-xs text-blue-600 mt-1">
+                      <i class="pi pi-cog mr-1"></i>Dynamic Template ({{ p.inputFields?.length || 0 }} input fields)
+                    </div>
+                  </div>
+                  
+                  <!-- Metrics Column (Fixed Width) -->
+                  <div class="w-24 flex-shrink-0 flex items-center justify-center gap-2">
+                    <!-- Usage Count Circle -->
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium text-gray-700 bg-blue-100"
+                         [title]="p.usageCount + ' uses'">
+                      {{ formatUsageCount(p.usageCount) }}
+                    </div>
+                    
+                    <!-- Success Rate Circle -->
+                    <div class="flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium text-gray-700 bg-green-100"
+                         [title]="p.successRate + '% success rate'">
+                      {{ p.successRate }}%
+                    </div>
+                  </div>
+                </div>
+              </label>
+              <!-- Empty state -->
+              <div *ngIf="(!currentPrompts || currentPrompts.length === 0)" class="px-6 py-10 text-sm text-gray-500">
+                No templates found for this type.
+              </div>
+            </div>
+          </div>
+
+          <!-- Parameters Section -->
+          <div *ngIf="selectedPromptIndex >= 0" class="border-t border-gray-200 bg-gray-50">
+            <div class="px-6 py-4">
+              <h4 class="text-md font-semibold text-gray-900 mb-4">Configure Parameters</h4>
+              
+              <!-- Live Preview -->
+              <div class="bg-white rounded-lg p-4 border border-gray-300 mb-4">
+                <div class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Live Preview</div>
+                
+                <!-- Static Template Preview (existing templates) -->
+                <div *ngIf="!isSelectedTemplateDynamic()" class="text-sm text-gray-900 font-mono leading-relaxed flex flex-wrap items-center gap-2">
+                  <ng-container *ngFor="let part of previewParts; trackBy: trackByPart">
+                    <span *ngIf="part.type === 'text'" class="text-gray-800">{{ part.text }}</span>
+                    <ng-container *ngIf="part.type === 'placeholder'">
+                      <input *ngIf="part.name === 'amount'" 
+                             type="number" 
+                             class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-24 font-semibold" 
+                             placeholder="0.00" 
+                             [(ngModel)]="amount" />
+                      <input *ngIf="part.name === 'date'" 
+                             type="date" 
+                             class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-36 font-semibold" 
+                             [(ngModel)]="date" />
+                      <select *ngIf="part.name !== 'amount' && part.name !== 'date'" 
+                              class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-auto min-w-32 font-semibold"
+                              [ngModel]="placeholderValues[part.name]"
+                              (ngModelChange)="onPlaceholderChange(part.name, $event)">
+                        <option *ngFor="let opt of getOptionsFor(part.name); trackBy: trackByIndex" [value]="opt">{{ opt }}</option>
+                      </select>
+                    </ng-container>
+                  </ng-container>
+                </div>
+                
+                <!-- Dynamic Template Preview (database templates) with inline inputs -->
+                <div *ngIf="isSelectedTemplateDynamic()" class="space-y-4">
+                  <div class="text-sm text-gray-900 font-mono leading-relaxed flex flex-wrap items-center gap-2">
+                    <ng-container *ngFor="let part of previewParts; trackBy: trackByPart">
+                      <span *ngIf="part.type === 'text'" class="text-gray-800">{{ part.text }}</span>
+                      <ng-container *ngIf="part.type === 'placeholder'">
+                        <input *ngIf="part.name === 'amount'" 
+                               type="number" 
+                               class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-24 font-semibold" 
+                               placeholder="0.00" 
+                               [ngModel]="dynamicInputValues[part.name]"
+                               (ngModelChange)="dynamicInputValues[part.name]=$event; onDynamicInputChange()" />
+                        <input *ngIf="part.name === 'date'" 
+                               type="date" 
+                               class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-36 font-semibold" 
+                               [ngModel]="dynamicInputValues[part.name]"
+                               (ngModelChange)="dynamicInputValues[part.name]=$event; onDynamicInputChange()" />
+                        <input *ngIf="part.name !== 'amount' && part.name !== 'date'"
+                               type="text"
+                               class="inline-input bg-blue-50 border border-blue-300 rounded px-2 py-1 text-sm w-auto min-w-32 font-semibold"
+                               [placeholder]="formatFieldLabel(part.name)"
+                               [ngModel]="dynamicInputValues[part.name]"
+                               (ngModelChange)="dynamicInputValues[part.name]=$event; onDynamicInputChange()" />
+                      </ng-container>
+                    </ng-container>
+                  </div>
+                  
+                  <!-- Filled Template Preview -->
+                  <div *ngIf="getSelectedTemplateInputFields().length > 0" class="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                    <div class="text-xs font-medium text-green-700 mb-2">Filled Template Preview:</div>
+                    <div class="text-sm text-green-800 leading-relaxed whitespace-pre-wrap">{{ getFilledTemplate() }}</div>
+                  </div>
+                </div>
+              </div>
+
+
+              <!-- Submit Button -->
+              <div class="flex items-center justify-between">
+                <button class="btn btn-secondary" (click)="saveAsTemplate()">
+                  <i class="pi pi-bookmark"></i>
+                  Save Template
+                </button>
+                <button class="btn btn-primary btn-lg" (click)="usePrompt()" [disabled]="isLoading || !isFormValid()">
+                  <span *ngIf="isLoading" class="flex items-center gap-2">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Processing...
+                  </span>
+                  <span *ngIf="!isLoading" class="flex items-center gap-2">
+                    <i class="pi pi-send"></i>
+                    Submit
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+        <!-- History Tab -->
+        <div *ngIf="showHistory" class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6">
+          <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900">Query History</h3>
+            <button class="btn btn-tertiary" (click)="toggleHistory()">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+          <div class="divide-y divide-gray-100">
+            <div *ngFor="let item of queryHistory; let i = index" 
+                 class="px-6 py-4 hover:bg-gray-50 cursor-pointer"
+                 (click)="loadHistoryItem(item)">
+              <div class="flex items-start justify-between">
+                <div class="flex-1">
+                  <div class="text-sm font-medium text-gray-900">{{ item.query }}</div>
+                  <div class="text-xs text-gray-500 mt-1">{{ formatDate(item.timestamp) }}</div>
+                  <div *ngIf="item.msgUid" class="flex items-center gap-4 mt-2">
+                    <div class="flex items-center gap-1">
+                      <i class="pi pi-id-card text-xs text-gray-400"></i>
+                      <span class="text-xs font-mono text-gray-600">{{ item.msgUid }}</span>
+                    </div>
+                    <div class="flex items-center gap-1">
+                      <i class="pi pi-bookmark text-xs text-gray-400"></i>
+                      <span class="text-xs font-mono text-gray-600">{{ item.instructionId || 'N/A' }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-1 text-xs rounded-full" [ngClass]="getHistoryStatusClass(item.status)">
+                    {{ item.status }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      
+
+      <!-- Results Section - Full Width Outside All Mode Content -->
+      <div #resultsSection *ngIf="showResults" class="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 w-full overflow-hidden">
+        <div class="divide-y divide-gray-100">
+          <div class="px-6 py-4 flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-semibold text-gray-900">Results</h3>
+              <p class="text-sm text-gray-600 mt-1">{{ lastQuery }}</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <button class="btn btn-tertiary" (click)="clearResults()">
+                <i class="pi pi-times"></i>
+                Clear Results
+              </button>
+            </div>
+          </div>
+
+          <div class="p-6 max-w-full overflow-hidden">
+            <!-- Loading State -->
+            <div *ngIf="isLoading" class="text-center py-12">
+              <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p class="mt-4 text-gray-600">Processing your request...</p>
+              <div class="w-64 bg-gray-200 rounded-full h-2 mx-auto mt-2">
+                <div class="bg-blue-600 h-2 rounded-full animate-pulse" style="width: 60%"></div>
+              </div>
+            </div>
+
+            <!-- Results -->
+            <div *ngIf="!isLoading && apiResponse" class="space-y-6">
+              <!-- Status Badge -->
+              <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium"
+                     [ngClass]="getStatusBadgeClass()">
+                  <i [class]="getStatusIcon()"></i>
+                  {{ getResultStatus() }}
+                </div>
+                <span class="text-xs text-gray-500">{{ getCurrentDateTime() }}</span>
+              </div>
+
+              <!-- Unique Identifiers -->
+              <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
+                <div class="text-sm font-medium text-gray-700 mb-3">Request Identifiers</div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div class="flex items-center gap-2">
+                    <i class="pi pi-id-card text-gray-500"></i>
+                    <div>
+                      <div class="text-xs text-gray-500">Message UID</div>
+                      <div class="font-mono text-sm font-semibold text-gray-800">{{ currentMsgUid }}</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <i class="pi pi-bookmark text-gray-500"></i>
+                    <div>
+                      <div class="text-xs text-gray-500">Instruction ID</div>
+                      <div class="font-mono text-sm font-semibold text-gray-800">{{ currentInstructionId }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Key Information -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div class="text-sm font-medium text-blue-900">Amount</div>
+                  <div class="text-lg font-semibold text-blue-700">{{ amount?.toLocaleString() || 'N/A' }} {{ currency }}</div>
+                </div>
+                <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+                  <div class="text-sm font-medium text-green-900">Date</div>
+                  <div class="text-lg font-semibold text-green-700">{{ date || 'N/A' }}</div>
+                </div>
+                <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <div class="text-sm font-medium text-purple-900">Type</div>
+                  <div class="text-lg font-semibold text-purple-700">{{ getCategoryLabel(activeCategory) }}</div>
+                </div>
+              </div>
+
+              <!-- Main Response -->
+              <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 overflow-hidden w-full">
+                <div class="p-6 max-w-full overflow-hidden">
+                  <div class="w-full max-w-none overflow-auto max-h-96">
+                    <div class="text-gray-800 leading-relaxed text-sm font-sans w-full prose prose-sm max-w-none" 
+                         style="word-break: break-word; overflow-wrap: anywhere; max-width: 100%; font-family: inherit;"
+                         [innerHTML]="getFormattedResponse()"></div>
+                    
+                    <!-- Streaming indicator at the end of content -->
+                    <div *ngIf="isStreaming" class="flex items-center gap-2 mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                      <span class="text-sm text-blue-700 font-medium">Receiving response...</span>
+                      <div class="flex gap-1 ml-2">
+                        <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse"></div>
+                        <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.2s"></div>
+                        <div class="w-1 h-1 bg-blue-500 rounded-full animate-pulse" style="animation-delay: 0.4s"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div *ngIf="getResponseMetadata()" class="px-6 py-3 bg-blue-100 border-t border-blue-200">
+                  <div class="text-xs text-blue-700 font-mono">{{ getResponseMetadata() }}</div>
+                </div>
+              </div>
+
+              <!-- Action Buttons -->
+              <div class="flex flex-wrap gap-3 mb-6">
+                <button class="btn btn-secondary" (click)="exportReport()">
+                  <i class="pi pi-download"></i>
+                  Export Report
+                </button>
+                <button class="btn btn-secondary" (click)="createTicket()">
+                  <i class="pi pi-ticket"></i>
+                  Create Ticket
+                </button>
+                <button class="btn btn-secondary" (click)="scheduleReview()">
+                  <i class="pi pi-calendar"></i>
+                  Schedule Review
+                </button>
+                <button class="btn btn-secondary" (click)="shareResults()">
+                  <i class="pi pi-share-alt"></i>
+                  Share
+                </button>
+              </div>
+
+              <!-- Rating System -->
+              <div class="border-t border-gray-200 pt-6">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <h4 class="text-sm font-medium text-gray-900 mb-2">Rate this response</h4>
+                    <p class="text-xs text-gray-600 mb-3">Help improve template accuracy by rating the quality of this result</p>
+                    
+                    <div class="flex items-center gap-2">
+                      <!-- Star Rating -->
+                      <div class="flex items-center gap-1">
+                        <button *ngFor="let star of [1,2,3,4,5]; trackBy: trackByIndex"
+                                (click)="setRating(star)"
+                                class="text-lg transition-colors duration-200"
+                                [class]="star <= currentRating ? 'text-yellow-400 hover:text-yellow-500' : 'text-gray-300 hover:text-yellow-300'">
+                          <i class="pi pi-star-fill"></i>
+                        </button>
+                      </div>
+                      
+                      <!-- Quick Rating Buttons -->
+                      <div class="flex items-center gap-2 ml-4">
+                        <button class="px-3 py-1 text-xs rounded-full border transition-colors"
+                                [class]="currentRating >= 4 ? 'bg-green-100 text-green-700 border-green-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-green-50'"
+                                (click)="setRating(5)">
+                          <i class="pi pi-check-circle mr-1"></i>
+                          Correct
+                        </button>
+                        <button class="px-3 py-1 text-xs rounded-full border transition-colors"
+                                [class]="currentRating <= 2 ? 'bg-red-100 text-red-700 border-red-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-red-50'"
+                                (click)="setRating(1)">
+                          <i class="pi pi-times-circle mr-1"></i>
+                          Incorrect
+                        </button>
+                      </div>
+                      
+                      <!-- Completion Status Buttons -->
+                      <div class="flex items-center gap-2 ml-4 border-l border-gray-300 pl-4">
+                        <button class="px-3 py-1 text-xs rounded-full border transition-colors"
+                                [class]="completionStatus === 'complete' ? 'bg-blue-100 text-blue-700 border-blue-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-blue-50'"
+                                (click)="setCompletionStatus('complete')">
+                          <i class="pi pi-check mr-1"></i>
+                          Complete
+                        </button>
+                        <button class="px-3 py-1 text-xs rounded-full border transition-colors"
+                                [class]="completionStatus === 'incomplete' ? 'bg-orange-100 text-orange-700 border-orange-300' : 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-orange-50'"
+                                (click)="setCompletionStatus('incomplete')">
+                          <i class="pi pi-exclamation-triangle mr-1"></i>
+                          Incomplete
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Rating Feedback -->
+                    <div *ngIf="currentRating > 0" class="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div class="flex items-center gap-2 text-sm">
+                        <i class="pi pi-info-circle text-blue-600"></i>
+                        <span class="text-blue-800">
+                          <span *ngIf="currentRating >= 4">Thank you! This positive feedback helps improve template accuracy.</span>
+                          <span *ngIf="currentRating === 3">Thank you for the feedback. We'll work to improve this template.</span>
+                          <span *ngIf="currentRating <= 2">Thanks for reporting this issue. We'll review and improve this template.</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Rating Stats -->
+                  <div class="text-right ml-6">
+                    <div class="text-xs text-gray-500">Template Success Rate</div>
+                    <div class="text-lg font-semibold" [class]="getSuccessRateClass(getCurrentTemplateSuccessRate())">
+                      {{ getCurrentTemplateSuccessRate() }}%
+                    </div>
+                    <div class="text-xs text-gray-500">{{ getCurrentTemplateUsageCount() }} total uses</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -564,87 +623,23 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
   };
   // Internal types
   previewParts: ({ type: 'text'; text: string } | { type: 'placeholder'; name: string })[] = [];
-  currentPrompts: Array<{template: string, usageCount: number, successRate: number}> = [];
-  // Instruction Types (Template Families) - Main Categories
-  instructionTypes = [
-    { key: 'instructions', label: 'Instructions & Processing', count: 16 },
-    { key: 'monitoring', label: 'Monitoring & Status', count: 12 },
-    { key: 'risk', label: 'Risk & Compliance', count: 8 },
-    { key: 'analysis', label: 'Analysis & Reporting', count: 10 },
-    { key: 'resolution', label: 'Problem Resolution', count: 6 },
-    { key: 'setup', label: 'Configuration & Setup', count: 4 }
-  ];
-  activeInstructionType = 'instructions';
+  currentPrompts: Array<{template: string, templateName?: string, usageCount: number, successRate: number, inputFields?: string[], originalTemplate?: PromptTemplate, isDynamic?: boolean}> = [];
+  dynamicInputValues: { [key: string]: string } = {};
+  // Instruction Types (Template Families) - populated from DB
+  instructionTypes: Array<{ key: string; label: string; count: number }> = [];
+  activeInstructionType = '';
 
-  // Sub-categories within each instruction type
-  categories = [
-    { key: 'utilisation', label: 'Utilisation Check', count: 4, instructionType: 'instructions' },
-    { key: 'inception', label: 'Inception', count: 4, instructionType: 'instructions' },
-    { key: 'rollover', label: 'Rollover', count: 4, instructionType: 'instructions' },
-    { key: 'termination', label: 'Termination', count: 4, instructionType: 'instructions' },
-    { key: 'status', label: 'Status Check', count: 3, instructionType: 'monitoring' },
-    { key: 'health', label: 'Health Monitoring', count: 4, instructionType: 'monitoring' },
-    { key: 'alerts', label: 'Alert Management', count: 5, instructionType: 'monitoring' },
-    { key: 'compliance', label: 'Compliance Check', count: 4, instructionType: 'risk' },
-    { key: 'validation', label: 'Risk Validation', count: 4, instructionType: 'risk' },
-    { key: 'reports', label: 'Generate Reports', count: 5, instructionType: 'analysis' },
-    { key: 'metrics', label: 'Performance Metrics', count: 5, instructionType: 'analysis' },
-    { key: 'troubleshoot', label: 'Troubleshooting', count: 3, instructionType: 'resolution' },
-    { key: 'recovery', label: 'Error Recovery', count: 3, instructionType: 'resolution' },
-    { key: 'config', label: 'Configuration', count: 2, instructionType: 'setup' },
-    { key: 'setup', label: 'Initial Setup', count: 2, instructionType: 'setup' }
-  ];
-  activeCategory = 'utilisation';
+  // Categories (template_category per family) - populated from DB
+  categories: Array<{ key: string; label: string; count: number; instructionType: string; familyType: string; templateCategory: string }> = [];
+  activeCategory = '';
 
-  promptStyle: 'basic' | 'conversational' | 'scenario' | 'comparative' = 'basic';
+  // Store all converted templates directly
+  allConvertedTemplates: Array<{template: string, templateName?: string, usageCount: number, successRate: number, inputFields?: string[], originalTemplate?: PromptTemplate, isDynamic?: boolean, familyType: string, templateCategory: string}> = [];
+  
+  // Enhanced prompt template data with usage statistics and success rates (keeping for backward compatibility)
+  promptsMap: Record<string, Array<{template: string, usageCount: number, successRate: number}>> = {};
 
-  // Enhanced prompt template data with usage statistics and success rates
-  promptsMap: Record<string, Array<{template: string, usageCount: number, successRate: number}>> = {
-    utilisation: [
-      { template: 'Verify if we can utilise [amount] [currency] hedge for [date]. Perform Utilisation Check.', usageCount: 156, successRate: 95 },
-      { template: 'Validate capacity to utilise [amount] [currency] hedge as of [date]. Perform Utilisation Check.', usageCount: 142, successRate: 92 },
-      { template: 'Check hedging availability for [amount] [currency] across entity scope as of [date]. Perform Utilisation Check.', usageCount: 89, successRate: 88 },
-      { template: 'Confirm if [amount] [currency] hedge can be processed across subsidiary entities for [date]. Perform Utilisation Check.', usageCount: 67, successRate: 91 }
-    ],
-    inception: [
-      { template: 'Create a new hedge instruction of [amount] [currency] starting [date]. Perform Inception.', usageCount: 203, successRate: 97 },
-      { template: 'Validate and book [amount] [currency] hedge effective [date]. Perform Inception.', usageCount: 178, successRate: 94 },
-      { template: 'Initiate hedge inception for [amount] [currency] across entity scope on [date]. Perform Inception.', usageCount: 134, successRate: 96 },
-      { template: 'Initiate hedge inception for [amount] [currency] at subsidiary level on [date]. Perform Inception.', usageCount: 98, successRate: 93 }
-    ],
-    rollover: [
-      { template: 'Verify rollover of [amount] [currency] hedge as of [date]. Perform Rollover.', usageCount: 187, successRate: 89 },
-      { template: 'Extend maturity and rollover [amount] [currency] hedge to [date]. Perform Rollover.', usageCount: 165, successRate: 87 },
-      { template: 'Check if [amount] [currency] hedge can be rolled over for entity scope on [date]. Perform Rollover.', usageCount: 123, successRate: 90 },
-      { template: 'Process rollover of [amount] [currency] hedge at subsidiary level for [date]. Perform Rollover.', usageCount: 87, successRate: 85 }
-    ],
-    termination: [
-      { template: 'Verify termination of [amount] [currency] hedge as of [date]. Perform Termination.', usageCount: 145, successRate: 92 },
-      { template: 'Validate closure of [amount] [currency] hedge effective [date]. Perform Termination.', usageCount: 132, successRate: 94 },
-      { template: 'Terminate [amount] [currency] hedge across entity scope on [date]. Perform Termination.', usageCount: 98, successRate: 91 },
-      { template: 'Confirm hedge termination of [amount] [currency] at subsidiary level for [date]. Perform Termination.', usageCount: 76, successRate: 89 }
-    ],
-    status: [
-      { template: 'Check current status of [amount] [currency] hedge for [date]. Perform Status Check.', usageCount: 89, successRate: 96 },
-      { template: 'Retrieve hedge status across all entities for [date]. Perform Status Check.', usageCount: 67, successRate: 94 },
-      { template: 'Validate hedge processing status for [amount] [currency]. Perform Status Check.', usageCount: 45, successRate: 92 }
-    ],
-    health: [
-      { template: 'Perform health check on hedge systems for [date]. Perform Health Monitoring.', usageCount: 78, successRate: 98 },
-      { template: 'Monitor system health across all hedge operations. Perform Health Monitoring.', usageCount: 65, successRate: 97 },
-      { template: 'Check hedge infrastructure health and performance. Perform Health Monitoring.', usageCount: 54, successRate: 95 },
-      { template: 'Validate system connectivity and data integrity. Perform Health Monitoring.', usageCount: 43, successRate: 99 }
-    ],
-    alerts: [
-      { template: 'Check active alerts for hedge operations on [date]. Perform Alert Management.', usageCount: 123, successRate: 91 },
-      { template: 'Review critical alerts for [amount] [currency] positions. Perform Alert Management.', usageCount: 98, successRate: 89 },
-      { template: 'Validate alert configurations and thresholds. Perform Alert Management.', usageCount: 87, successRate: 93 },
-      { template: 'Process and acknowledge pending alerts. Perform Alert Management.', usageCount: 76, successRate: 95 },
-      { template: 'Generate alert summary report for [date]. Perform Alert Management.', usageCount: 54, successRate: 97 }
-    ]
-  };
-
-  selectedPromptIndex = 0;
+  selectedPromptIndex = -1;
 
   // Form controls
   currencies: string[] = []; // Will be fetched from currency config table
@@ -661,7 +656,9 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     private sanitizer: DomSanitizer, 
     private http: HttpClient,
     private currencyService: CurrencyService,
-    private hawkAgentService: HawkAgentSimpleService
+    private hawkAgentService: HawkAgentSimpleService,
+    private promptTemplatesService: PromptTemplatesService,
+    private cdr: ChangeDetectorRef
   ) {}
 
   // Generate MSG_UID in format MSG_UID_0000
@@ -710,7 +707,10 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     // Load currencies from service
     this.loadCurrencies();
     
-    // Template mode initialization
+    // Load templates from configuration database
+    this.loadTemplatesFromDatabase();
+    
+    // Template mode initialization with hardcoded templates
     this.refreshPromptsForCategory();
     this.initPlaceholdersForSelectedPrompt();
     this.buildPreviewParts();
@@ -727,10 +727,7 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
       this.isAgentMode = true; // Switch to agent mode when prompt is present
     }
     
-    // If the iframe doesn't load in time, show an informative notice
-    this.noticeTimer = setTimeout(() => {
-      if (!this.iframeLoaded && this.isAgentMode) this.loadNotice = true;
-    }, 4000);
+    // Simplified: no iframe timing or warnings
   }
 
   ngOnDestroy() {
@@ -768,8 +765,192 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     });
   }
 
+  private async loadTemplatesFromDatabase() {
+    try {
+      // Subscribe to configuration templates and keep Template Mode in sync
+      this.promptTemplatesService.templates$.subscribe((templates) => {
+        if (Array.isArray(templates)) {
+          this.updateTemplatesFromDatabase(templates);
+        }
+      });
+      // Ensure initial load
+      await this.promptTemplatesService.loadTemplates();
+    } catch (err) {
+      console.error('Failed to load templates from database:', err);
+    }
+  }
+
+  private updateTemplatesFromDatabase(templates: PromptTemplate[]) {
+    // Reset everything
+    this.allConvertedTemplates = [];
+    this.categories = [];
+    this.instructionTypes = [];
+
+    // Step 1: Convert all templates to our format and store them
+    const activeTemplates = templates.filter(t => t.status === 'active');
+    
+    this.allConvertedTemplates = activeTemplates.map(template => {
+      const derivedFields = (template.input_fields && template.input_fields.length > 0)
+        ? template.input_fields
+        : (template.prompt_text ? this.promptTemplatesService.getInputFields(template.prompt_text) : []);
+      
+      return {
+        template: template.prompt_text || template.name || 'No prompt text available',
+        templateName: template.name || 'Unnamed Template',
+        usageCount: template.usage_count || 0,
+        successRate: 85,
+        inputFields: derivedFields || [],
+        originalTemplate: template,
+        isDynamic: (derivedFields && derivedFields.length > 0) ||
+                   (template.prompt_text ? /\{\{[^}]+\}\}/.test(template.prompt_text) : false),
+        familyType: template.family_type,
+        templateCategory: template.template_category || 'general'
+      };
+    });
+
+    // Step 2: Build instruction types from unique family types
+    const uniqueFamilies = [...new Set(activeTemplates.map(t => t.family_type))];
+    this.instructionTypes = uniqueFamilies.map(family => ({
+      key: this.normalizeKeySegment(family),
+      label: this.formatFamilyLabel(family),
+      count: activeTemplates.filter(t => t.family_type === family).length
+    }));
+
+    // Step 3: Build categories from unique family+category combinations
+    const uniqueCategories = new Map<string, {familyType: string, templateCategory: string, count: number}>();
+    
+    activeTemplates.forEach(template => {
+      const key = `${template.family_type}__${template.template_category || 'general'}`;
+      if (!uniqueCategories.has(key)) {
+        uniqueCategories.set(key, {
+          familyType: template.family_type,
+          templateCategory: template.template_category || 'general',
+          count: 0
+        });
+      }
+      const category = uniqueCategories.get(key)!;
+      category.count++;
+    });
+
+    this.categories = Array.from(uniqueCategories.entries()).map(([key, data]) => ({
+      key,
+      label: this.formatCategoryLabel(data.templateCategory),
+      count: data.count,
+      instructionType: this.normalizeKeySegment(data.familyType),
+      familyType: data.familyType,
+      templateCategory: data.templateCategory
+    }));
+
+    // Step 4: Set initial active states
+    if (!this.activeInstructionType || !this.instructionTypes.some(t => t.key === this.activeInstructionType)) {
+      this.activeInstructionType = this.instructionTypes[0]?.key || '';
+    }
+
+    const familyCategories = this.getCurrentCategories();
+    if (!this.activeCategory || !familyCategories.some(c => c.key === this.activeCategory)) {
+      this.activeCategory = familyCategories[0]?.key || '';
+    }
+    
+    // Step 5: Load current prompts
+    this.refreshPromptsForCategory();
+    
+    if (this.currentPrompts.length > 0) {
+      this.selectedPromptIndex = 0;
+      this.initPlaceholdersForSelectedPrompt();
+      this.buildPreviewParts();
+    }
+  }
+
+  // Removed - no longer needed with simplified approach
+
+  private formatFamilyLabel(family: string): string {
+    const map: Record<string, string> = {
+      hedge_accounting: 'Hedge Accounting',
+      risk_management: 'Risk Management',
+      compliance: 'Compliance',
+      reporting: 'Reporting',
+      analysis: 'Analysis',
+      operations: 'Operations'
+    };
+    return map[family] || this.formatCategoryLabel(family);
+  }
+
+  // Removed - no longer needed with simplified approach
+
+  private formatCategoryLabel(category: string): string {
+    return category.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+
+  private ensureActiveCategoryForFamily() {
+    const familyCategories = this.getCurrentCategories();
+    if (!familyCategories || familyCategories.length === 0) {
+      this.activeCategory = '';
+      return;
+    }
+    // If current activeCategory doesn't belong to this family or is empty, switch to the first
+    const belongs = this.activeCategory && familyCategories.some(c => c.key === this.activeCategory);
+    if (!belongs) {
+      this.activeCategory = familyCategories[0].key;
+    }
+  }
+
+  // Key normalization to make category selection robust across labels/casing/spaces
+  private normalizeKeySegment(seg: string): string {
+    return (seg || '')
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '_');
+  }
+
+  // Removed - no longer needed with simplified approach
+
+  private getFamilyTypeForInstructionType(instructionType: string): string {
+    // Map instruction types back to family types
+    const instructionToFamily: { [key: string]: string } = {
+      'instructions': 'hedge_accounting',
+      'monitoring': 'risk_management',
+      'risk': 'compliance',
+      'analysis': 'reporting',
+      'resolution': 'operations',
+      'setup': 'operations'
+    };
+    
+    return instructionToFamily[instructionType] || instructionType;
+  }
+
+  private getCategoryKeyForFamilyType(familyType: string): string | null {
+    // This method is deprecated - using getCategoryKeyForTemplate instead
+    return null;
+  }
+
+  // Removed - no longer needed with simplified approach
+
   private refreshPromptsForCategory() {
-    this.currentPrompts = this.promptsMap[this.activeCategory] || [];
+    // Find the active category object
+    const activeCategoryObj = this.categories.find(c => c.key === this.activeCategory);
+    if (!activeCategoryObj) {
+      this.currentPrompts = [];
+      this.cdr.detectChanges();
+      return;
+    }
+    
+    // Filter templates directly from allConvertedTemplates
+    const newPrompts = this.allConvertedTemplates.filter(template => {
+      return template.familyType === activeCategoryObj.familyType && 
+             template.templateCategory === activeCategoryObj.templateCategory;
+    });
+    
+    // Force array reference change to trigger Angular change detection
+    this.currentPrompts = [...newPrompts];
+    
+    console.log(`✓ Updated category "${this.activeCategory}" -> ${this.currentPrompts.length} templates:`, 
+                this.currentPrompts.map(p => p.templateName));
+    
+    // Force change detection immediately
+    this.cdr.detectChanges();
+    
     // Calculate real usage stats from database
     this.calculateRealUsageStats();
   }
@@ -783,18 +964,44 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     this.selectedPromptIndex = i;
     this.initPlaceholdersForSelectedPrompt(true);
     this.buildPreviewParts();
+    
+    // Initialize dynamic input values for database templates
+    if (this.isSelectedTemplateDynamic()) {
+      const inputFields = this.getSelectedTemplateInputFields();
+      this.dynamicInputValues = {};
+      inputFields.forEach(field => {
+        this.dynamicInputValues[field] = '';
+      });
+    }
   }
 
   selectFirstPrompt() {
     this.selectedPromptIndex = 0;
     this.initPlaceholdersForSelectedPrompt(true);
     this.buildPreviewParts();
+    
+    // Initialize dynamic input values for database templates
+    if (this.isSelectedTemplateDynamic()) {
+      const inputFields = this.getSelectedTemplateInputFields();
+      this.dynamicInputValues = {};
+      inputFields.forEach(field => {
+        this.dynamicInputValues[field] = '';
+      });
+    }
   }
 
   // Build inline preview tokens replacing placeholders with input controls
   private buildPreviewParts() {
-    const base = this.selectedPromptBase;
-    const regex = /\[([^\]]+)\]/g; // capture name between brackets
+    const base = this.isSelectedTemplateDynamic()
+      ? this.getSelectedTemplateText()
+      : this.selectedPromptBase;
+    // Detect placeholder syntax present in the template
+    let regex: RegExp;
+    if (/\{\{[^}]+\}\}/.test(base)) {
+      regex = /\{\{([^}]+)\}\}/g; // {{field}}
+    } else {
+      regex = /\[([^\]]+)\]/g;     // [field]
+    }
     const parts: ({ type: 'text'; text: string } | { type: 'placeholder'; name: string })[] = [];
     let lastIndex = 0;
     let m: RegExpExecArray | null;
@@ -829,37 +1036,64 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
   }
 
   private initPlaceholdersForSelectedPrompt(resetNonAmount: boolean = false) {
-    const base = this.selectedPromptBase;
-    const regex = /\[([^\]]+)\]/g;
+    const base = this.isSelectedTemplateDynamic()
+      ? this.getSelectedTemplateText()
+      : this.selectedPromptBase;
+    const regex = /\{\{([^}]+)\}\}|\[([^\]]+)\]/g; // support both {{}} and []
     const present: Record<string, true> = {};
     let m: RegExpExecArray | null;
     while ((m = regex.exec(base)) !== null) {
-      const name = m[1].trim().toLowerCase();
-      present[name] = true;
-      if (name !== 'amount' && !this.placeholderValues[name]) {
-        const opts = this.getOptionsFor(name);
-        this.placeholderValues[name] = opts[0] ?? '';
+      const name = (m[1] || m[2] || '').trim();
+      const lowerName = name.toLowerCase();
+      present[lowerName] = true;
+      if (this.isSelectedTemplateDynamic()) {
+        // Initialize dynamic input values map using original case
+        if (!this.dynamicInputValues[name]) {
+          this.dynamicInputValues[name] = '';
+        }
+      } else {
+        if (lowerName !== 'amount' && !this.placeholderValues[lowerName]) {
+          const opts = this.getOptionsFor(lowerName);
+          this.placeholderValues[lowerName] = opts[0] ?? '';
+        }
       }
     }
     // Clean up stale placeholders when switching prompts/categories
     if (resetNonAmount) {
-      Object.keys(this.placeholderValues).forEach(k => {
-        if (k !== 'amount' && !present[k]) {
-          delete this.placeholderValues[k];
-        }
-      });
+      if (this.isSelectedTemplateDynamic()) {
+        Object.keys(this.dynamicInputValues).forEach(k => {
+          // Check lowercase version for dynamic templates
+          if (!present[k.toLowerCase()]) {
+            delete this.dynamicInputValues[k];
+          }
+        });
+      } else {
+        Object.keys(this.placeholderValues).forEach(k => {
+          if (k !== 'amount' && !present[k]) {
+            delete this.placeholderValues[k];
+          }
+        });
+      }
     }
   }
 
   usePrompt() {
-    const preview = this.previewParts
-      .map(part => {
-        if (part.type === 'text') return part.text;
-        if (part.name === 'amount') return (this.amount ?? 0).toFixed(2);
-        if (part.name === 'date') return this.date;
-        return this.placeholderValues[part.name] ?? '';
-      })
-      .join('');
+    let preview: string;
+    
+    // Handle dynamic templates
+    if (this.isSelectedTemplateDynamic()) {
+      preview = this.getFilledTemplate();
+    } else {
+      // Handle static templates (existing logic)
+      preview = this.previewParts
+        .map(part => {
+          if (part.type === 'text') return part.text;
+          if (part.name === 'amount') return (this.amount ?? 0).toFixed(2);
+          if (part.name === 'date') return this.date;
+          return this.placeholderValues[part.name] ?? '';
+        })
+        .join('');
+    }
     
     // Generate unique identifiers for this request
     this.currentMsgUid = this.generateMsgUID();
@@ -901,7 +1135,13 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
         instructionId: this.currentInstructionId
       });
       
-      await this.hawkAgentService.createSession(promptText, this.currentMsgUid, this.currentInstructionId);
+      await this.hawkAgentService.createSession(
+        promptText, 
+        this.currentMsgUid, 
+        this.currentInstructionId,
+        this.activeCategory,
+        this.selectedPromptIndex + 1  // Convert to 1-based index
+      );
       console.log('Database session created successfully');
     } catch (error) {
       console.error('Error creating database session:', error);
@@ -1134,21 +1374,126 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     const cleanResponse = this.getCleanResponse();
     
     // Convert **text** to <strong>text</strong>
-    const formattedText = cleanResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    let formattedText = cleanResponse.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     
-    // Escape other HTML but preserve our strong tags and line breaks
+    // Convert table-like structures (|...| format) to HTML tables
+    formattedText = this.convertTablesToHtml(formattedText);
+    
+    // Escape other HTML but preserve our strong tags, tables, and line breaks
     const escapedText = formattedText
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;')
-      // Restore our strong tags
+      // Restore our HTML elements
       .replace(/&lt;strong&gt;(.*?)&lt;\/strong&gt;/g, '<strong>$1</strong>')
+      .replace(/&lt;table([^&]*)&gt;/g, '<table$1>')
+      .replace(/&lt;\/table&gt;/g, '</table>')
+      .replace(/&lt;thead([^&]*)&gt;/g, '<thead$1>')
+      .replace(/&lt;\/thead&gt;/g, '</thead>')
+      .replace(/&lt;tbody([^&]*)&gt;/g, '<tbody$1>')
+      .replace(/&lt;\/tbody&gt;/g, '</tbody>')
+      .replace(/&lt;tr([^&]*)&gt;/g, '<tr$1>')
+      .replace(/&lt;\/tr&gt;/g, '</tr>')
+      .replace(/&lt;th([^&]*)&gt;/g, '<th$1>')
+      .replace(/&lt;\/th&gt;/g, '</th>')
+      .replace(/&lt;td([^&]*)&gt;/g, '<td$1>')
+      .replace(/&lt;\/td&gt;/g, '</td>')
       // Convert line breaks to <br> tags
       .replace(/\n/g, '<br>');
     
     return this.sanitizer.bypassSecurityTrustHtml(escapedText);
+  }
+
+  private convertTablesToHtml(text: string): string {
+    // Split text into lines for processing
+    const lines = text.split('\n');
+    let result = '';
+    let inTable = false;
+    let tableRows = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Check if this line looks like a table row (starts and ends with |)
+      if (line.startsWith('|') && line.endsWith('|') && line.includes('|')) {
+        if (!inTable) {
+          inTable = true;
+          tableRows = [];
+        }
+        
+        // Parse the row
+        const cells = line.split('|').slice(1, -1).map(cell => cell.trim());
+        tableRows.push(cells);
+        
+        // Check if next line is a separator (|---|---|)
+        const nextLine = i + 1 < lines.length ? lines[i + 1].trim() : '';
+        const isSeparator = nextLine.match(/^\|[\s\-:]+\|$/);
+        
+        // If this is the end of table or separator line, convert to HTML
+        if (i === lines.length - 1 || !lines[i + 1].trim().startsWith('|') || isSeparator) {
+          if (isSeparator) i++; // Skip separator line
+          
+          // Convert to HTML table
+          let tableHtml = '<table class="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-lg overflow-hidden my-4">';
+          
+          // Header row (first row)
+          if (tableRows.length > 0) {
+            tableHtml += '<thead class="bg-gray-50">';
+            tableHtml += '<tr>';
+            tableRows[0].forEach(cell => {
+              tableHtml += `<th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">${cell}</th>`;
+            });
+            tableHtml += '</tr>';
+            tableHtml += '</thead>';
+          }
+          
+          // Body rows (remaining rows)
+          if (tableRows.length > 1) {
+            tableHtml += '<tbody class="bg-white divide-y divide-gray-200">';
+            for (let j = 1; j < tableRows.length; j++) {
+              tableHtml += '<tr class="hover:bg-gray-50">';
+              tableRows[j].forEach(cell => {
+                tableHtml += `<td class="px-4 py-3 text-sm text-gray-900 border-b border-gray-100">${cell}</td>`;
+              });
+              tableHtml += '</tr>';
+            }
+            tableHtml += '</tbody>';
+          }
+          
+          tableHtml += '</table>';
+          result += tableHtml;
+          
+          inTable = false;
+          tableRows = [];
+        }
+      } else {
+        // Not a table line
+        if (inTable) {
+          // End of table without proper formatting - add accumulated rows as table
+          if (tableRows.length > 0) {
+            let tableHtml = '<table class="min-w-full divide-y divide-gray-200 border border-gray-300 rounded-lg overflow-hidden my-4">';
+            tableHtml += '<tbody class="bg-white divide-y divide-gray-200">';
+            tableRows.forEach(row => {
+              tableHtml += '<tr class="hover:bg-gray-50">';
+              row.forEach(cell => {
+                tableHtml += `<td class="px-4 py-3 text-sm text-gray-900 border-b border-gray-100">${cell}</td>`;
+              });
+              tableHtml += '</tr>';
+            });
+            tableHtml += '</tbody>';
+            tableHtml += '</table>';
+            result += tableHtml;
+          }
+          inTable = false;
+          tableRows = [];
+        }
+        result += line + '\n';
+      }
+    }
+    
+    return result;
   }
 
   getResponseMetadata(): string {
@@ -1170,7 +1515,20 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
   }
 
   isFormValid(): boolean {
-    // Check if all required fields are filled
+    // Handle dynamic templates
+    if (this.isSelectedTemplateDynamic()) {
+      const inputFields = this.getSelectedTemplateInputFields();
+      return inputFields.every(field => {
+        const value = this.dynamicInputValues[field];
+        // Handle both strings and numbers
+        return value !== null && value !== undefined && (
+          (typeof value === 'string' && value.trim() !== '') ||
+          (typeof value === 'number' && !isNaN(value))
+        );
+      });
+    }
+    
+    // Handle static templates (existing logic)
     const placeholderParts = this.previewParts.filter(p => p.type === 'placeholder') as Array<{type: 'placeholder', name: string}>;
     const hasAmount = placeholderParts.some(p => p.name === 'amount') ? this.amount !== null && this.amount > 0 : true;
     const hasDate = placeholderParts.some(p => p.name === 'date') ? !!this.date : true;
@@ -1343,11 +1701,11 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
             user_marked: true
           };
           
-          // Here you would call an update method on the service to update both agent_status and metadata
-          // await this.hawkAgentService.updateSession(currentSession.id, { 
-          //   agent_status: agentStatus, 
-          //   metadata: updatedMetadata 
-          // });
+          // Update the session in the database
+          await this.hawkAgentService.updateSession(this.currentMsgUid, { 
+            agent_status: agentStatus, 
+            metadata: updatedMetadata 
+          });
           
           console.log(`Task marked as ${status}, agent_status updated to ${agentStatus}`);
           
@@ -1470,24 +1828,57 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
   onInstructionTypeSelect(key: string) {
     if (this.activeInstructionType === key) return;
     this.activeInstructionType = key;
-    // Set first category in the new instruction type as active
-    const firstCategory = this.categories.find(c => c.instructionType === key);
-    if (firstCategory) {
-      this.activeCategory = firstCategory.key;
-      this.refreshPromptsForCategory();
+    this.ensureActiveCategoryForFamily();
+    this.refreshPromptsForCategory();
+    if (this.currentPrompts.length > 0) {
       this.selectFirstPrompt();
+    } else {
+      this.selectedPromptIndex = -1;
     }
   }
 
   onCategorySelect(key: string) {
-    if (this.activeCategory === key) return;
+    if (this.activeCategory === key) {
+      return;
+    }
+    
+    console.log(`🔄 Category changed: "${this.activeCategory}" -> "${key}"`);
     this.activeCategory = key;
+    
+    // Reset selection first
+    this.selectedPromptIndex = -1;
+    
+    // Refresh templates for the new category
     this.refreshPromptsForCategory();
-    this.selectFirstPrompt();
+    
+    // Select first prompt if available
+    if (this.currentPrompts.length > 0) {
+      this.selectFirstPrompt();
+    }
+    
+    // Force additional change detection to ensure UI updates
+    this.cdr.detectChanges();
   }
 
   getCurrentCategories() {
     return this.categories.filter(c => c.instructionType === this.activeInstructionType);
+  }
+
+  getCategoryTabClass(categoryKey: string): string {
+    if (this.activeCategory === categoryKey) {
+      return 'bg-blue-600 text-white shadow-lg transform scale-105';
+    }
+    return 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-700 shadow-sm';
+  }
+
+  getSelectedCategoryLabel(): string {
+    const category = this.categories.find(c => c.key === this.activeCategory);
+    return category ? category.label : 'Select a Category';
+  }
+
+  getSelectedInstructionTypeLabel(): string {
+    const type = this.instructionTypes.find(t => t.key === this.activeInstructionType);
+    return type ? type.label : '';
   }
 
   getSuccessRateClass(rate: number): string {
@@ -1503,6 +1894,19 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     return count.toString();
   }
 
+  getTemplatePreview(template: string): string {
+    // Truncate template text for preview, preserving word boundaries
+    const maxLength = 120;
+    if (template.length <= maxLength) return template;
+    
+    const truncated = template.substring(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxLength * 0.8) {
+      return truncated.substring(0, lastSpace) + '...';
+    }
+    return truncated + '...';
+  }
+
   async calculateRealUsageStats() {
     try {
       const sessions = await this.hawkAgentService.getSessions();
@@ -1516,12 +1920,8 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
           const categoryMatch = session.template_category === this.activeCategory;
           const templateMatch = session.template_index === index + 1; // template_index is 1-based in database
           
-          console.log(`Template ${index + 1}: category=${this.activeCategory}, session_category=${session.template_category}, session_template_index=${session.template_index}, matches=${categoryMatch && templateMatch}`);
-          
           return categoryMatch && templateMatch;
         });
-        
-        console.log(`Template ${index + 1} (${this.activeCategory}) - Found ${matchingSessions.length} matching sessions`);
         
         const usageCount = matchingSessions.length;
         
@@ -1539,15 +1939,12 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
         
         const successRate = usageCount > 0 ? Math.round((successfulSessions.length / usageCount) * 100) : 0;
         
-        console.log(`Template ${index + 1}: usageCount=${usageCount}, successfulSessions=${successfulSessions.length}, successRate=${successRate}%`);
-        
         prompt.usageCount = usageCount;
         prompt.successRate = successRate;
       });
       
       // Update master data
       this.promptsMap[this.activeCategory] = [...this.currentPrompts];
-      console.log('Updated promptsMap for category:', this.activeCategory, this.currentPrompts);
     } catch (error) {
       console.error('Error calculating usage stats:', error);
       // Fallback to existing mock data if database call fails
@@ -1563,10 +1960,12 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
   trackByPart = (_: number, part: { type: string; text?: string; name?: string }) => part.type + ':' + (part.text ?? part.name ?? _);
 
   // Agent Mode methods
-  onIframeLoad() {
-    this.iframeLoaded = true;
-    this.loadNotice = false;
+  onAgentModeToggle(isAgentMode: boolean) {
+    this.isAgentMode = isAgentMode;
   }
+
+  onIframeLoad() {}
+  onIframeError() {}
 
   dismissPromptToast() {
     this.showPromptToast = false;
@@ -1610,5 +2009,93 @@ export class PromptTemplatesComponent implements OnInit, OnDestroy {
     } catch {
       // ignore
     }
+  }
+
+  // Helper methods for dynamic templates
+  isSelectedTemplateDynamic(): boolean {
+    if (this.selectedPromptIndex < 0 || !this.currentPrompts[this.selectedPromptIndex]) {
+      return false;
+    }
+    const selected = this.currentPrompts[this.selectedPromptIndex];
+    if (selected.isDynamic) return true;
+    // Fallback: detect {{...}} placeholders in text
+    const text = this.getSelectedTemplateText();
+    return /\{\{[^}]+\}\}/.test(text) || /\[[^\]]+\]/.test(text);
+  }
+
+  getSelectedTemplateName(): string {
+    if (this.selectedPromptIndex < 0 || !this.currentPrompts[this.selectedPromptIndex]) {
+      return '';
+    }
+    const selectedPrompt = this.currentPrompts[this.selectedPromptIndex];
+    return selectedPrompt.templateName || selectedPrompt.originalTemplate?.name || '';
+  }
+
+  getSelectedTemplateText(): string {
+    if (this.selectedPromptIndex < 0 || !this.currentPrompts[this.selectedPromptIndex]) {
+      return '';
+    }
+    const selectedPrompt = this.currentPrompts[this.selectedPromptIndex];
+    return selectedPrompt.originalTemplate?.prompt_text || selectedPrompt.template;
+  }
+
+  getSelectedTemplateInputFields(): string[] {
+    if (this.selectedPromptIndex < 0 || !this.currentPrompts[this.selectedPromptIndex]) {
+      return [];
+    }
+    const text = this.getSelectedTemplateText();
+    return this.extractFieldsFromText(text);
+  }
+
+  formatFieldLabel(field: string): string {
+    return field.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
+  }
+
+  onDynamicInputChange(): void {
+    // Update the filled template preview whenever input values change
+    // Trigger change detection to refresh the template preview
+    this.cdr.detectChanges();
+  }
+
+  getFilledTemplate(): string {
+    if (this.selectedPromptIndex < 0 || !this.currentPrompts[this.selectedPromptIndex]) {
+      return '';
+    }
+    
+    const selectedPrompt = this.currentPrompts[this.selectedPromptIndex];
+    const templateText = selectedPrompt.originalTemplate?.prompt_text || selectedPrompt.template;
+    
+    // Use the prompt templates service to fill the template
+    if (selectedPrompt.originalTemplate && this.promptTemplatesService.fillTemplate) {
+      return this.promptTemplatesService.fillTemplate(templateText, this.dynamicInputValues);
+    }
+    
+    // Fallback: simple replacement
+    let filledText = templateText;
+    Object.keys(this.dynamicInputValues).forEach(key => {
+      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
+      const replacement = this.dynamicInputValues[key] || `{{${key}}}`;
+      filledText = filledText.replace(regex, replacement);
+    });
+    
+    return filledText;
+  }
+
+  private extractFieldsFromText(text: string): string[] {
+    const fieldsSet = new Set<string>();
+    // {{field}}
+    const braceRe = /\{\{([^}]+)\}\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = braceRe.exec(text)) !== null) {
+      const name = (m[1] || '').trim();
+      if (name) fieldsSet.add(name);
+    }
+    // [field]
+    const bracketRe = /\[([^\]]+)\]/g;
+    while ((m = bracketRe.exec(text)) !== null) {
+      const name = (m[1] || '').trim();
+      if (name) fieldsSet.add(name);
+    }
+    return Array.from(fieldsSet);
   }
 }

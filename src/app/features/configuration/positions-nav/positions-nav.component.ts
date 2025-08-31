@@ -16,8 +16,8 @@ import { PositionsNavService, PositionNavRow } from './positions-nav.service';
   template: `
     <div class="p-6 h-full flex flex-col">
       <div class="mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-2">Positions & NAV</h2>
-        <p class="text-gray-600">Manage NAV and position snapshots</p>
+        <h2 class="text-xl font-semibold text-gray-900 mb-2">SFX Positions</h2>
+        <p class="text-gray-600">Auto-populated positions (read-only)</p>
       </div>
 
       <div class="filter-bar">
@@ -26,20 +26,20 @@ import { PositionsNavService, PositionNavRow } from './positions-nav.service';
             <label class="filter-label">Search:</label>
             <input class="filter-input w-64" placeholder="Search..." [(ngModel)]="search" (ngModelChange)="onSearchChange($event)" />
           </div>
-          <div class="ml-auto">
+          <div class="ml-auto" *ngIf="false">
             <button class="btn btn-primary" (click)="openAdd()"><i class="pi pi-plus"></i><span>Add</span></button>
           </div>
-        </div>
+      </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow-sm border border-gray-200 flex-1 min-h-0">
-        <ag-grid-angular class="ag-theme-alpine w-full" style="height: 100%; min-height: 520px;"
+      <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+        <ag-grid-angular class="ag-theme-alpine w-full" style="height: 600px;"
           [columnDefs]="columnDefs" [rowData]="rows" [defaultColDef]="defaultColDef" [gridOptions]="gridOptions" (gridReady)="onGridReady($event)">
         </ag-grid-angular>
       </div>
 
-      <!-- Delete confirm -->
-      <p-dialog header="Delete NAV" [(visible)]="showConfirmDelete" [modal]="true" [closable]="false" [style]="{width: '520px'}" styleClass="app-dialog">
+      <!-- Delete confirm (hidden for read-only) -->
+      <p-dialog *ngIf="false" header="Delete NAV" [(visible)]="showConfirmDelete" [modal]="true" [closable]="false" [style]="{width: '520px'}" styleClass="app-dialog">
         <div class="flex flex-col items-center text-center gap-2">
           <i class="pi pi-trash text-red-500 text-4xl mb-1"></i>
           <div class="text-base font-semibold text-gray-800">Delete NAV</div>
@@ -53,8 +53,8 @@ import { PositionsNavService, PositionNavRow } from './positions-nav.service';
         </ng-template>
       </p-dialog>
 
-      <!-- Minimal Add/Edit sheet placeholder (structure mirrors currency/framework) -->
-      <div *ngIf="showSheet" class="fixed inset-0 z-40">
+      <!-- Add/Edit sheet disabled in read-only mode -->
+      <div *ngIf="false && showSheet" class="fixed inset-0 z-40">
         <div class="absolute inset-0 bg-black/50" (click)="showSheet=false"></div>
         <div class="absolute inset-x-0 top-[2.5vh] h-[95vh] w-[100vw] bg-white shadow-xl border border-gray-200 rounded-t-2xl overflow-hidden flex flex-col" (click)="$event.stopPropagation()">
           <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -241,8 +241,8 @@ import { PositionsNavService, PositionNavRow } from './positions-nav.service';
         </div>
       </div>
 
-      <!-- Confirm Save -->
-      <p-dialog header="Confirm Changes" [(visible)]="showConfirmSave" [modal]="true" [closable]="false" [style]="{width: '520px'}" styleClass="app-dialog">
+      <!-- Confirm Save (hidden) -->
+      <p-dialog *ngIf="false" header="Confirm Changes" [(visible)]="showConfirmSave" [modal]="true" [closable]="false" [style]="{width: '520px'}" styleClass="app-dialog">
         <div class="flex flex-col items-center text-center gap-2">
           <i class="pi pi-check-circle text-green-500 text-4xl mb-1"></i>
           <div class="text-base font-semibold text-gray-800">Apply Changes</div>
@@ -317,17 +317,10 @@ export class PositionsNavComponent implements OnInit {
     { field: 'source_system', headerName: 'Source System', width: 150 },
     { field: 'source_batch_id', headerName: 'Batch ID', width: 140 },
     { field: 'created_at', headerName: 'Created At', width: 150 },
-    { field: 'modified_at', headerName: 'Modified At', width: 150 },
-    { headerName: 'Actions', width: 120, pinned: 'right', cellRenderer: (p: any)=>{
-      const d = document.createElement('div'); d.className='flex gap-2';
-      const ebtn = document.createElement('button'); ebtn.className='text-gray-500 hover:text-blue-600 p-1'; ebtn.innerHTML='<i class="pi pi-pencil"></i>';
-      ebtn.addEventListener('click', ()=> p.context.componentParent.editRow(p.data));
-      const dbtn = document.createElement('button'); dbtn.className='text-gray-500 hover:text-red-600 p-1'; dbtn.innerHTML='<i class="pi pi-trash"></i>';
-      dbtn.addEventListener('click', ()=> p.context.componentParent.deleteRow(p.data));
-      d.appendChild(ebtn); d.appendChild(dbtn); return d; } }
+    { field: 'modified_at', headerName: 'Modified At', width: 150 }
   ];
   defaultColDef: ColDef = { resizable: true, sortable: true, filter: 'agSetColumnFilter', minWidth: 150 };
-  gridOptions: GridOptions = { pagination: true, paginationPageSize: 10, paginationPageSizeSelector: [10, 20, 50, 100], animateRows: true, context: { componentParent: this } };
+  gridOptions: GridOptions = { pagination: true, paginationPageSize: 10, paginationPageSizeSelector: [10, 20, 50, 100], animateRows: true };
   private gridApi?: GridApi;
   onGridReady(e: GridReadyEvent){ this.gridApi = e.api; e.api.sizeColumnsToFit(); }
 

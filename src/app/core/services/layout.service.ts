@@ -4,8 +4,9 @@ import { Injectable, signal } from '@angular/core';
   providedIn: 'root'
 })
 export class LayoutService {
-  private mainSidebarCollapsed = signal(false);
-  private subSidebarCollapsed = signal(false);
+  // Default both sidebars to collapsed; expand on hover/navigation only
+  private mainSidebarCollapsed = signal(true);
+  private subSidebarCollapsed = signal(true);
   private subSidebarVisible = signal(false);
   private mainSidebarHovered = signal(false);
   private subSidebarHovered = signal(false);

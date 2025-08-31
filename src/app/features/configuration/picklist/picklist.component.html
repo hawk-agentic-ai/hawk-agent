@@ -161,9 +161,9 @@
     header="Add Picklist Item" 
     [(visible)]="showAddDialog"
     [modal]="true"
-    [style]="{width: '500px'}"
+    [style]="{width: '100vw', height: '95vh', 'max-width': '100vw', 'max-height': '95vh', 'border-top-left-radius': '16px', 'border-top-right-radius': '16px'}"
     [closable]="true"
-    styleClass="p-fluid">
+    styleClass="entity-dialog entity-dialog-full">
     
     <div class="grid grid-cols-1 gap-4 p-4">
       <div class="field">
@@ -171,10 +171,11 @@
         <input 
           id="itemName"
           type="text" 
-          pInputText 
+          pInputText
+          class="filter-input w-full"
           [(ngModel)]="newPicklistItem.name"
           placeholder="Enter picklist item name"
-          class="w-full">
+        >
       </div>
       
       <div class="field">
@@ -182,10 +183,11 @@
         <input 
           id="itemCode"
           type="text" 
-          pInputText 
+          pInputText
+          class="filter-input w-full"
           [(ngModel)]="newPicklistItem.code"
           placeholder="Enter unique code"
-          class="w-full">
+        >
       </div>
       
       <div class="field">
@@ -195,7 +197,8 @@
           [options]="categories" 
           [(ngModel)]="newPicklistItem.category"
           placeholder="Select category"
-          class="w-full">
+          styleClass="filter-input w-full"
+          [style]="{width:'100%'}">
         </p-dropdown>
       </div>
       
@@ -204,10 +207,11 @@
         <input 
           id="itemDescription"
           type="text" 
-          pInputText 
+          pInputText
+          class="filter-input w-full"
           [(ngModel)]="newPicklistItem.description"
           placeholder="Enter description"
-          class="w-full">
+        >
       </div>
       
       <div class="field">
@@ -217,7 +221,8 @@
           [options]="statusOptions" 
           [(ngModel)]="newPicklistItem.status"
           placeholder="Select status"
-          class="w-full">
+          styleClass="filter-input w-full"
+          [style]="{width:'100%'}">
         </p-dropdown>
       </div>
     </div>
