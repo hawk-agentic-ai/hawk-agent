@@ -31,15 +31,26 @@ import { PromptTemplatesService, PromptTemplate } from './prompt-templates.servi
     <p class="text-gray-600">Manage and configure prompt templates for HAWK Agent Template Mode</p>
   </div>
 
+  <!-- Horizontal Family Type Tabs -->
+  <div class="mb-3 overflow-x-auto">
+    <div class="flex gap-2">
+      <button *ngFor="let f of familyTypeOptions"
+              class="px-3 py-1.5 rounded-full border text-sm whitespace-nowrap"
+              [class.bg-blue-600]="selectedFamilyType===f.value"
+              [class.text-white]="selectedFamilyType===f.value"
+              [class.border-blue-600]="selectedFamilyType===f.value"
+              [class.bg-white]="selectedFamilyType!==f.value"
+              [class.text-gray-700]="selectedFamilyType!==f.value"
+              [class.border-gray-300]="selectedFamilyType!==f.value"
+              (click)="onFamilyTabChange(f.value)">{{ f.label }}</button>
+    </div>
+  </div>
+
   <!-- Search and Add Button Section -->
   <div class="flex items-center gap-4 mb-4">
     <div class="flex-1 flex items-center gap-2">
       <label class="filter-label">Search:</label>
       <input type="text" placeholder="Search templates..." [(ngModel)]="search" (ngModelChange)="onSearchChange($event)" class="filter-input flex-1 max-w-xs">
-    </div>
-    <div class="flex items-center gap-2">
-      <label class="filter-label">Family Type:</label>
-      <p-dropdown [options]="familyTypeOptions" [(ngModel)]="selectedFamilyType" (onChange)="onFilterChange()" placeholder="All Types" optionLabel="label" optionValue="value" class="filter-input" [style]="{width:'180px'}"></p-dropdown>
     </div>
     <button class="btn btn-primary ml-auto" (click)="openAdd()">
       <i class="pi pi-plus"></i>
@@ -53,7 +64,7 @@ import { PromptTemplatesService, PromptTemplate } from './prompt-templates.servi
       class="ag-theme-alpine w-full"
       style="height: 600px;"
       [columnDefs]="columnDefs"
-      [rowData]="templates"
+      [rowData]="filteredTemplates"
       [defaultColDef]="defaultColDef"
       [gridOptions]="gridOptions"
       (gridReady)="onGridReady($event)">
@@ -167,6 +178,7 @@ import { PromptTemplatesService, PromptTemplate } from './prompt-templates.servi
 export class PromptTemplatesComponent implements OnInit, OnDestroy {
   defaultColDef: ColDef = { resizable: true, sortable: true, filter: 'agSetColumnFilter', minWidth: 100 };
   templates: PromptTemplate[] = [];
+  filteredTemplates: PromptTemplate[] = [];
   templateSub: any;
   search = '';
   selectedFamilyType = '';
@@ -255,14 +267,21 @@ Input fields will be automatically created from {{field_name}} patterns.`;
   private searchTimer: any;
 
   async ngOnInit() {
+    // Initialize with empty options first
+    this.familyTypeOptions = [{ label: 'All Types', value: '' }];
+    // Set default selection to 'All Types' 
+    this.selectedFamilyType = '';
+    
     this.templateSub = this.promptTemplatesService.templates$.subscribe(data => {
       this.templates = data;
-      this.applyFilters(); // Apply filters when data changes
+      this.applyFilters(); // Apply filters which will update filteredTemplates
       setTimeout(() => this.gridApi?.sizeColumnsToFit(), 0);
     });
     
-    // Load dynamic family types
-    await this.loadFamilyTypes();
+    // Load dynamic family types asynchronously without blocking
+    this.loadFamilyTypes().catch(err => {
+      console.error('Failed to load family types:', err);
+    });
   }
 
   private async loadFamilyTypes() {
@@ -275,7 +294,13 @@ Input fields will be automatically created from {{field_name}} patterns.`;
       ];
     } catch (error) {
       console.error('Error loading family types:', error);
-      this.familyTypeOptions = [{ label: 'All Types', value: '' }];
+      // Provide fallback options even if database call fails
+      this.familyTypeOptions = [
+        { label: 'All Types', value: '' },
+        { label: 'Hedge Accounting', value: 'hedge_accounting' },
+        { label: 'Risk Management', value: 'risk_management' },
+        { label: 'Compliance', value: 'compliance' }
+      ];
     }
   }
 
@@ -302,7 +327,9 @@ Input fields will be automatically created from {{field_name}} patterns.`;
 
   onGridReady(e: GridReadyEvent) { 
     this.gridApi = e.api; 
-    e.api.sizeColumnsToFit(); 
+    e.api.sizeColumnsToFit();
+    // Apply initial filters when grid is ready
+    this.applyFilters();
   }
 
   onSearchChange(v: string) {
@@ -312,7 +339,11 @@ Input fields will be automatically created from {{field_name}} patterns.`;
   }
 
   onFilterChange() {
-    console.log('Filter changed, selectedFamilyType:', this.selectedFamilyType);
+    this.applyFilters();
+  }
+
+  onFamilyTabChange(familyValue: string) {
+    this.selectedFamilyType = familyValue;
     this.applyFilters();
   }
 
@@ -328,12 +359,10 @@ Input fields will be automatically created from {{field_name}} patterns.`;
       );
     }
     if (this.selectedFamilyType && this.selectedFamilyType !== '') {
-      console.log('Filtering by family type:', this.selectedFamilyType);
-      console.log('Templates before filter:', filtered.length);
       filtered = filtered.filter(t => t.family_type === this.selectedFamilyType);
-      console.log('Templates after filter:', filtered.length);
     }
-    this.gridApi?.setRowData(filtered);
+    
+    this.filteredTemplates = filtered;
     setTimeout(() => this.gridApi?.sizeColumnsToFit(), 0);
   }
 
