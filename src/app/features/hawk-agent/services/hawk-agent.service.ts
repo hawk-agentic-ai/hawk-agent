@@ -65,11 +65,11 @@ export class HawkAgentService {
       const supabase = getSupabase();
       const { data, error } = await supabase
         .from('hawk_agent_sessions')
-        .insert([{
+        .upsert([{
           ...sessionData,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }])
+        }], { onConflict: 'msg_uid' })
         .select()
         .single();
 

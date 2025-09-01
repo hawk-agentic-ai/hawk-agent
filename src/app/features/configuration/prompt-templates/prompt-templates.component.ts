@@ -39,7 +39,7 @@ import { PromptTemplatesService, PromptTemplate } from './prompt-templates.servi
     </div>
     <div class="flex items-center gap-2">
       <label class="filter-label">Family Type:</label>
-      <p-dropdown [options]="familyTypeOptions" [(ngModel)]="selectedFamilyType" (onChange)="onFilterChange()" placeholder="All Types" class="filter-input" [style]="{width:'180px'}"></p-dropdown>
+      <p-dropdown [options]="familyTypeOptions" [(ngModel)]="selectedFamilyType" (onChange)="onFilterChange()" placeholder="All Types" optionLabel="label" optionValue="value" class="filter-input" [style]="{width:'180px'}"></p-dropdown>
     </div>
     <button class="btn btn-primary ml-auto" (click)="openAdd()">
       <i class="pi pi-plus"></i>
@@ -84,15 +84,15 @@ import { PromptTemplatesService, PromptTemplate } from './prompt-templates.servi
               </div>
               <div class="field">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Family Type</label>
-                <p-dropdown [options]="familyTypeOptions" [(ngModel)]="form.family_type" name="family_type" placeholder="Select family type" class="w-full" styleClass="filter-input" [style]="{width:'100%'}" (onChange)="onFamilyTypeChange($event)"></p-dropdown>
+                <p-dropdown [options]="familyTypeOptions" [(ngModel)]="form.family_type" name="family_type" placeholder="Select family type" optionLabel="label" optionValue="value" class="w-full" styleClass="filter-input" [style]="{width:'100%'}" (onChange)="onFamilyTypeChange($event)"></p-dropdown>
               </div>
               <div class="field">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Template Category</label>
-                <p-dropdown [options]="templateCategoryOptions" [(ngModel)]="form.template_category" name="template_category" placeholder="Select category" class="w-full" styleClass="filter-input" [style]="{width:'100%'}" [disabled]="!form.family_type"></p-dropdown>
+                <p-dropdown [options]="templateCategoryOptions" [(ngModel)]="form.template_category" name="template_category" placeholder="Select category" optionLabel="label" optionValue="value" class="w-full" styleClass="filter-input" [style]="{width:'100%'}" [disabled]="!form.family_type"></p-dropdown>
               </div>
               <div class="field">
                 <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <p-dropdown [options]="[{label: 'Active', value: 'active'}, {label: 'Inactive', value: 'inactive'}]" [(ngModel)]="form.status" name="status" placeholder="Select status" class="w-full" styleClass="filter-input" [style]="{width:'100%'}"></p-dropdown>
+                <p-dropdown [options]="[{label: 'Active', value: 'active'}, {label: 'Inactive', value: 'inactive'}]" [(ngModel)]="form.status" name="status" placeholder="Select status" optionLabel="label" optionValue="value" class="w-full" styleClass="filter-input" [style]="{width:'100%'}"></p-dropdown>
               </div>
             </div>
           </div>
@@ -209,10 +209,11 @@ Input fields will be automatically created from {{field_name}} patterns.`;
   ) {}
 
   columnDefs: ColDef[] = [
-    { field: 'name', headerName: 'Template Name', flex: 1, sortable: true },
-    { field: 'family_type', headerName: 'Family Type', width: 150, sortable: true },
-    { field: 'template_category', headerName: 'Category', width: 140, sortable: true },
-    { field: 'description', headerName: 'Description', width: 200, sortable: true },
+    // Reordered: Family Type, Category, Template Name, Prompt Text
+    { field: 'family_type', headerName: 'Family Type', width: 160, sortable: true },
+    { field: 'template_category', headerName: 'Category', width: 160, sortable: true },
+    { field: 'name', headerName: 'Template Name', width: 220, sortable: true },
+    { field: 'prompt_text', headerName: 'Prompt Text', flex: 1, sortable: true },
     { field: 'usage_count', headerName: 'Usage', width: 100, sortable: true, cellClass: 'text-center' },
     { field: 'status', headerName: 'Status', width: 100, cellRenderer: (p: any) => {
       const val = p.value === 'active' ? 'Active' : 'Inactive';
@@ -256,6 +257,7 @@ Input fields will be automatically created from {{field_name}} patterns.`;
   async ngOnInit() {
     this.templateSub = this.promptTemplatesService.templates$.subscribe(data => {
       this.templates = data;
+      this.applyFilters(); // Apply filters when data changes
       setTimeout(() => this.gridApi?.sizeColumnsToFit(), 0);
     });
     
@@ -265,9 +267,15 @@ Input fields will be automatically created from {{field_name}} patterns.`;
 
   private async loadFamilyTypes() {
     try {
-      this.familyTypeOptions = await this.promptTemplatesService.getUniqueFamilyTypes();
+      const familyTypes = await this.promptTemplatesService.getUniqueFamilyTypes();
+      // Add "All Types" option at the beginning
+      this.familyTypeOptions = [
+        { label: 'All Types', value: '' },
+        ...familyTypes
+      ];
     } catch (error) {
       console.error('Error loading family types:', error);
+      this.familyTypeOptions = [{ label: 'All Types', value: '' }];
     }
   }
 
@@ -304,6 +312,7 @@ Input fields will be automatically created from {{field_name}} patterns.`;
   }
 
   onFilterChange() {
+    console.log('Filter changed, selectedFamilyType:', this.selectedFamilyType);
     this.applyFilters();
   }
 
@@ -313,13 +322,16 @@ Input fields will be automatically created from {{field_name}} patterns.`;
       const s = this.search.trim().toLowerCase();
       filtered = filtered.filter(t =>
         (t.name?.toLowerCase().includes(s) ||
-          t.description?.toLowerCase().includes(s) ||
+          t.prompt_text?.toLowerCase().includes(s) ||
           t.family_type?.toLowerCase().includes(s) ||
           t.template_category?.toLowerCase().includes(s))
       );
     }
-    if (this.selectedFamilyType) {
+    if (this.selectedFamilyType && this.selectedFamilyType !== '') {
+      console.log('Filtering by family type:', this.selectedFamilyType);
+      console.log('Templates before filter:', filtered.length);
       filtered = filtered.filter(t => t.family_type === this.selectedFamilyType);
+      console.log('Templates after filter:', filtered.length);
     }
     this.gridApi?.setRowData(filtered);
     setTimeout(() => this.gridApi?.sizeColumnsToFit(), 0);

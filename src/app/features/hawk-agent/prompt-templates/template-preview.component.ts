@@ -30,11 +30,16 @@ import { PromptTemplatesService } from '../../configuration/prompt-templates/pro
                 <ng-container *ngIf="isSelect(f); else textField">
                   <select class="filter-input w-full" [(ngModel)]="values[f]" (ngModelChange)="computeFilled()">
                     <option value="">-- Select --</option>
-                    <ng-container *ngIf="f.toLowerCase().includes('currency'); else entityOpts">
+                    <ng-container *ngIf="isCurrencyField(f); else checkEntityType">
                       <option *ngFor="let c of currencyOptions" [value]="c">{{ c }}</option>
                     </ng-container>
-                    <ng-template #entityOpts>
-                      <option *ngFor="let e of entityOptions" [value]="entityOptionValueFor(f, e)">{{ e.label }}</option>
+                    <ng-template #checkEntityType>
+                      <ng-container *ngIf="isEntityTypeField(f); else entityOpts">
+                        <option *ngFor="let et of entityTypeOptions" [value]="et.value">{{ et.label }}</option>
+                      </ng-container>
+                      <ng-template #entityOpts>
+                        <option *ngFor="let e of entityOptions" [value]="entityOptionValueFor(f, e)">{{ e.label }}</option>
+                      </ng-template>
                     </ng-template>
                   </select>
                 </ng-container>
@@ -74,6 +79,7 @@ export class TemplatePreviewComponent implements OnChanges, OnInit {
   filledPrompt = '';
   currencyOptions: string[] = [];
   entityOptions: { label: string; value: string }[] = [];
+  entityTypeOptions: { label: string; value: string }[] = [];
   copied = false;
 
   send(){
@@ -88,22 +94,31 @@ export class TemplatePreviewComponent implements OnChanges, OnInit {
   }
   getPlaceholder(f: string){
     const name = (f||'').toLowerCase();
+    const flat = name.replace(/\s+/g,'_');
     if (name.includes('date')) return 'YYYY-MM-DD';
     if (name.includes('currency')) return 'e.g., USD';
     if (name.includes('amount') || name.includes('qty') || name.includes('quantity')) return 'e.g., 100000';
     if (name.includes('rate')) return 'e.g., 0.05';
+    if (flat.includes('entity_type') || name.includes('entity_type')) return 'e.g., Branch';
     if (name.includes('entity')) return 'e.g., Entity A';
     return `Enter ${f}`;
   }
   isSelect(f: string){
     const name = (f||'').toLowerCase();
     const flat = name.replace(/\s+/g,'_');
-    return name.includes('currency') || name === 'entity' || flat.includes('entity_id') || flat.includes('entity_code') || flat.includes('entity_name');
+    return name.includes('currency') || 
+           name === 'entity' || 
+           flat.includes('entity_id') || 
+           flat.includes('entity_code') || 
+           flat.includes('entity_name') ||
+           flat.includes('entity_type') || 
+           name.includes('entity_type');
   }
   getSelectOptions(f: string){
     const name = (f||'').toLowerCase();
     const flat = name.replace(/\s+/g,'_');
     if (name.includes('currency')) return this.currencyOptions;
+    if (flat.includes('entity_type') || name.includes('entity_type')) return this.entityTypeOptions;
     if (name === 'entity' || flat.includes('entity_id') || flat.includes('entity_code') || flat.includes('entity_name')) return this.entityOptions;
     return [] as any;
   }
@@ -119,6 +134,13 @@ export class TemplatePreviewComponent implements OnChanges, OnInit {
         this.entityOptions = items;
       });
     } catch {}
+    // Load entity type options (static list from entity configuration)
+    this.entityTypeOptions = [
+      { label: 'Branch', value: 'Branch' },
+      { label: 'Subsidiary', value: 'Subsidiary' },
+      { label: 'Association', value: 'Association' },
+      { label: 'TMU', value: 'TMU' }
+    ];
   }
   ngOnChanges(ch: SimpleChanges){
     // Only reset values if template actually changed or if fields meaningfully changed
@@ -191,5 +213,16 @@ export class TemplatePreviewComponent implements OnChanges, OnInit {
     // generic 'entity' defaults to label (human-friendly)
     if (name === 'entity') return opt.label;
     return opt.value;
+  }
+
+  // Helper methods for template
+  isCurrencyField(field: string): boolean {
+    return (field||'').toLowerCase().includes('currency');
+  }
+
+  isEntityTypeField(field: string): boolean {
+    const name = (field||'').toLowerCase();
+    const flat = name.replace(/\s+/g,'_');
+    return flat.includes('entity_type') || name.includes('entity_type');
   }
 }

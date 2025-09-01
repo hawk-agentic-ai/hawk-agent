@@ -160,7 +160,7 @@ export class AppComponent implements OnInit {
 
   private setHawkAgentSubmenu() {
     this.currentSubMenuItems = [
-      { label: 'Template Mode', icon: 'pi pi-file', link: '/hawk-agent/prompt-templates' },
+      { label: 'Agentic AI', icon: 'pi pi-file', link: '/hawk-agent/prompt-templates' },
       { label: 'Prompt History', icon: 'pi pi-history', link: '/hawk-agent/prompt-history' }
     ];
     this.currentSubSidebarIcon = 'pi pi-microchip-ai';

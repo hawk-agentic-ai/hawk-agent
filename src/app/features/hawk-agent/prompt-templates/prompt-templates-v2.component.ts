@@ -74,12 +74,14 @@ import { AGENT_IFRAME_URL } from '../../../core/config/app-config';
           [streaming]="isStreaming"
           [rating]="currentRating"
           [completion]="completionStatus"
+          [feedback]="feedbackText"
           (export)="exportReport()"
           (ticket)="createTicket()"
           (schedule)="scheduleReview()"
           (share)="shareResults()"
           (rate)="setRating($event)"
           (setCompletion)="setCompletionStatus($event)"
+          (feedbackChange)="onFeedbackChange($event)"
         ></app-pt-results>
       </div>
     </div>
@@ -106,6 +108,11 @@ export class PromptTemplatesV2Component implements OnInit {
   selectedIndex = -1;
   currentRating = 0;
   completionStatus: 'complete'|'incomplete'|null = null;
+  feedbackText = '';
+  // Streaming robustness
+  private endedEvent = false;
+  private retryCount = 0;
+  private readonly maxRetries = 3;
   // Agent toggle + URL
   isAgentMode = false;
   agentUrlSafe: SafeResourceUrl;
@@ -312,10 +319,21 @@ export class PromptTemplatesV2Component implements OnInit {
     this.isStreaming = true;
     this.isLoading = true;
 
+    // Pick Dify app key: use the provided Utilisation agent for Utilisation category only
+    const cat = (this.selectedCategory || '').toLowerCase();
+    const appKey = cat.includes('util') ? 'app-cxzVbRQUUDofTjx1nDfajpRX' : 'app-KKtaMynVyn8tKbdV9VbbaeyR';
+
+    // Reset retry/ended flags
+    this.retryCount = 0;
+    this.endedEvent = false;
+    this.doDifyFetch(appKey, payload);
+  }
+
+  private doDifyFetch(appKey: string, payload: any){
     fetch('https://api.dify.ai/v1/chat-messages', {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer app-KKtaMynVyn8tKbdV9VbbaeyR',
+        'Authorization': `Bearer ${appKey}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -324,17 +342,23 @@ export class PromptTemplatesV2Component implements OnInit {
       if (!response.body) throw new Error('Empty response body');
       this.isLoading = false;
       this.reader = response.body.getReader();
-      return this.processStream(this.reader!);
+      return this.processStream(this.reader!, appKey, payload);
     }).catch(err => {
       console.error('Dify error:', err);
+      // Retry on network/HTTP errors if not ended and retries remain
+      if (!this.endedEvent && this.retryCount < this.maxRetries){
+        this.retryCount++;
+        setTimeout(()=> this.doDifyFetch(appKey, payload), Math.min(1500 * this.retryCount, 5000));
+        return;
+      }
       this.isLoading = false;
       this.isStreaming = false;
-      this.responseText = `Error: ${err?.message || err}`;
+      this.responseText += `\n\n[Stream stopped: ${err?.message || err}]`;
       this.updateDatabaseSession('failed').catch(()=>{});
     });
   }
 
-  private async processStream(reader: ReadableStreamDefaultReader<Uint8Array>) {
+  private async processStream(reader: ReadableStreamDefaultReader<Uint8Array>, appKey: string, payload: any) {
     const decoder = new TextDecoder();
     let buffer = '';
     let conversationId = '';
@@ -343,7 +367,18 @@ export class PromptTemplatesV2Component implements OnInit {
     try {
       while (true) {
         const { value, done } = await reader.read();
-        if (done) { this.isStreaming = false; this.finishStream(conversationId, taskId, tokenUsage); break; }
+        if (done) {
+          // If we didn't receive an explicit end event, try to resume
+          if (!this.endedEvent && this.retryCount < this.maxRetries){
+            this.retryCount++;
+            if (conversationId) payload.conversation_id = conversationId;
+            setTimeout(()=> this.doDifyFetch(appKey, payload), Math.min(1500 * this.retryCount, 5000));
+            return;
+          }
+          this.isStreaming = false;
+          this.finishStream(conversationId, taskId, tokenUsage);
+          break;
+        }
         if (!value) continue;
         const chunk = decoder.decode(value, { stream: true });
         buffer += chunk;
@@ -361,6 +396,7 @@ export class PromptTemplatesV2Component implements OnInit {
             }
             if (json.metadata?.usage || json.usage) tokenUsage = json.metadata?.usage || json.usage;
             if (json.event === 'message_end' || json.event === 'workflow_finished') {
+              this.endedEvent = true;
               this.isStreaming = false; this.finishStream(conversationId, taskId, tokenUsage); return;
             }
           } catch {}
@@ -368,6 +404,11 @@ export class PromptTemplatesV2Component implements OnInit {
       }
     } catch (e) {
       console.error('stream error', e);
+      if (!this.endedEvent && this.retryCount < this.maxRetries){
+        this.retryCount++;
+        setTimeout(()=> this.doDifyFetch(appKey, payload), Math.min(1500 * this.retryCount, 5000));
+        return;
+      }
       this.isStreaming = false;
       this.responseText += '\n\n[Stream interrupted due to error]';
       this.updateDatabaseSession('failed').catch(()=>{});
@@ -394,12 +435,22 @@ export class PromptTemplatesV2Component implements OnInit {
 
   setRating(n: number){
     this.currentRating = n;
-    try { this.sessions.updateSession(this.currentMsgUid, { metadata: { rating: n } }); } catch {}
+    // Persist rating (and any feedback captured) only on action
+    const md: any = { rating: n };
+    if ((this.feedbackText || '').trim()) md.feedback = this.feedbackText.trim();
+    try { this.sessions.updateSession(this.currentMsgUid, { metadata: md }); } catch {}
   }
   setCompletionStatus(s: 'complete'|'incomplete'){
     this.completionStatus = s;
     const agent_status = s === 'complete' ? 'completed' : 'failed';
-    try { this.sessions.updateSession(this.currentMsgUid, { agent_status, metadata: { completion_status: s } }); this.refreshSuccessRates().catch(()=>{}); } catch {}
+    const md: any = { completion_status: s };
+    if ((this.feedbackText || '').trim()) md.feedback = this.feedbackText.trim();
+    try { this.sessions.updateSession(this.currentMsgUid, { agent_status, metadata: md }); this.refreshSuccessRates().catch(()=>{}); } catch {}
+  }
+
+  onFeedbackChange(text: string){
+    this.feedbackText = text || '';
+    // Do not persist here; saved with rating/completion actions
   }
 
   private async refreshSuccessRates(){

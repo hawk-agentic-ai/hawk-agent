@@ -1,11 +1,12 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-pt-results',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="flex flex-col h-full">
       <div class="px-2 py-1 border-b border-gray-100">
@@ -84,6 +85,11 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
                 </button>
               </div>
             </div>
+            <!-- Feedback input -->
+            <div class="mt-4">
+              <label class="block text-xs font-medium text-gray-600 mb-1">Reason / Feedback (optional)</label>
+              <textarea rows="4" class="filter-input w-full" [ngModel]="feedback" (ngModelChange)="feedbackChange.emit($event)" placeholder="Describe why the response was correct/incorrect, or any notes for improvement..."></textarea>
+            </div>
           </div>
         </div>
       </div>
@@ -95,12 +101,14 @@ export class TemplateResultsComponent {
   @Input() streaming = false;
   @Input() rating = 0;
   @Input() completion: 'complete'|'incomplete'|null = null;
+  @Input() feedback = '';
   @Output() export = new EventEmitter<void>();
   @Output() ticket = new EventEmitter<void>();
   @Output() schedule = new EventEmitter<void>();
   @Output() share = new EventEmitter<void>();
   @Output() rate = new EventEmitter<number>();
   @Output() setCompletion = new EventEmitter<'complete'|'incomplete'>();
+  @Output() feedbackChange = new EventEmitter<string>();
 
   constructor(private sanitizer: DomSanitizer) {}
 

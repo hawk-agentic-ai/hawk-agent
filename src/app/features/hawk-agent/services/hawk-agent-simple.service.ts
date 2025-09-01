@@ -36,8 +36,10 @@ export class HawkAgentSimpleService {
     };
     try {
       const supabase = getSupabase();
-      // Avoid chaining select() to prevent PostgREST 400 on some configurations
-      const { error } = await supabase.from('hawk_agent_sessions').insert([payload]);
+      // Use upsert on msg_uid to avoid 409 conflicts if a duplicate msg_uid arrives
+      const { error } = await supabase
+        .from('hawk_agent_sessions')
+        .upsert([payload], { onConflict: 'msg_uid' });
       if (error) throw error;
     } catch (error) {
       console.warn('createSession: proceeding without DB insert due to error:', error);
